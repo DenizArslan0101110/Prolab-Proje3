@@ -4,21 +4,41 @@
 #include <xlsxio_read.h>
 #include <stdint.h>
 #include <basetsd.h>
+#include <ctype.h>
+#include <unistd.h>
 
+#define PAPER_LIMIT 400
+#define LONG_STRING_LEN 8192
+#define MAX_PAPER_LEN 2048
 #define MAX_NAME_LEN 64
+#define ORCID_LEN 24
+#define DATABASE_SIZE 4096
 
-#define _INF printf("\x1b[0mINFO: ");
-#define _ERR printf("\x1b[31mERROR: ");
-#define _WRN printf("\x1b[33mWARNING: ");
+#define _INF write(1, "\x1b[0mINFO: ", 11);
+#define _ERR write(1, "\x1b[31mERROR: ", 13);
+#define _WRN write(1, "\x1b[33mWARNING: ", 15);
+#define _DBG write(1, "\x1b[36mDEBUG: ", 13);
 
-// Structure to represent a node in the adjacency list
+struct Paper
+{
+    char name[MAX_PAPER_LEN];
+};
+
+struct Author
+{
+    char name[MAX_NAME_LEN];
+    char orcid[ORCID_LEN];
+    struct Paper papers[PAPER_LIMIT];
+};
+
+// structure to represent a node in the adjacency list
 struct Node
 {
-    int node_id;
+    uint16_t node_id;
     struct Node* next;
 };
 
-// Structure to represent the graph
+// structure to represent the graph
 struct Graph
 {
     int numVertices;
@@ -26,7 +46,54 @@ struct Graph
     int isDirected;
 };
 
-// Function to create a new node
+
+
+void RouteInfoToNecessaryFunctions(struct Author* data_list, char* orcid, int mc_pos, char* mc_name, char* npc_names, char* paper, struct Graph* main_graph);
+uint16_t FindFirstEmptyPaperSlot(struct Paper* papers);
+uint32_t FindFirstEmptyAuthorSlot(struct Author* data_list);
+int GraphPreparation(struct Author* data_list, struct Author new_recruit, int big_boss_node_id, struct Graph* main_graph);
+int FindCountOfChar(char *value, char identifier);
+char* PickString(char* long_string, int target_index, char encaser, char separator, char use_safe_mode);
+int ExcelKatledici(struct Author* data_list, struct Graph* main_graph);
+int ExcelYaglayici();
+struct Node* createNode(int v);
+struct Graph* createGraph(int vertices, char isDirected);
+void Edge(struct Graph* graph, int src, int dest);
+void PrintGraph(struct Graph* graph);
+int CountUsedIndexes(struct Graph* graph);
+void FreeGraph(struct Graph* graph);
+
+int main()
+{
+    struct Graph* test_graph = createGraph(DATABASE_SIZE, 0);
+    struct Author* test_data_list = (struct Author*)calloc(DATABASE_SIZE, sizeof(struct Author));
+    memset(test_data_list,0,sizeof(*test_data_list));
+    ExcelKatledici(test_data_list, test_graph);
+    int actual_used = CountUsedIndexes(test_graph);
+    actual_used += 10;
+    _DBG printf("\n%d\n",actual_used);
+    FreeGraph(test_graph);
+    free(test_data_list);
+
+    struct Graph* main_graph = createGraph(actual_used, 0);
+    struct Author* data_list = (struct Author*)calloc(DATABASE_SIZE, sizeof(struct Author));
+    memset(data_list,0,sizeof(*data_list));
+    ExcelKatledici(data_list, main_graph);
+
+
+
+    for(int i=0; i<DATABASE_SIZE ;i++)
+    {
+        _INF
+        write(1, data_list[i].orcid, strlen(data_list[i].orcid));
+        write(1, " , ", 3);
+        write(1, data_list[i].name, strlen(data_list[i].name));
+        write(1, "\n", 1);
+    }
+    PrintGraph(main_graph);
+}
+
+// function to create a new node
 struct Node* createNode(int v)
 {
     struct Node* newNode = malloc(sizeof(struct Node));
@@ -35,30 +102,28 @@ struct Node* createNode(int v)
     return newNode;
 }
 
-// Function to create a graph
+// function to create a graph
 struct Graph* createGraph(int vertices, char isDirected)
 {
     struct Graph* graph = malloc(sizeof(struct Graph));
     graph->numVertices = vertices;
     graph->isDirected = isDirected;
-
-// Create an array of adjacency lists
+// create an array of adjacency lists
     graph->list_of_adjacency_lists = malloc(vertices * sizeof(struct Node*));
-
-// Empties the adjacency lists
+// empties the adjacency lists
     for (int i = 0; i < vertices; i++) graph->list_of_adjacency_lists[i] = NULL;
     return graph;
 }
 
-// Function to add an edge to the graph
-void addEdge(struct Graph* graph, int src, int dest)
+// function to add an edge to the graph
+void Edge(struct Graph* graph, int src, int dest)
 {
-// Add edge from src to dest
+// add edge from src to dest
     struct Node* newNode = createNode(dest);
     newNode->next = graph->list_of_adjacency_lists[src];
     graph->list_of_adjacency_lists[src] = newNode;
 
-// If the graph is undirected, add an edge from dest to src as well
+// if the graph is undirected, add an edge from dest to src as well
     if (!graph->isDirected)
     {
         newNode = createNode(src);
@@ -67,14 +132,14 @@ void addEdge(struct Graph* graph, int src, int dest)
     }
 }
 
-// Function to print the adjacency list representation of the graph
-void printGraph(struct Graph* graph)
+// function to print the adjacency list representation of the graph
+void PrintGraph(struct Graph* graph)
 {
-    printf("Vertex:  Adjacency List\n");
+    _INF printf("Adjacency List\n");
     for (int v = 0; v < graph->numVertices; v++)
     {
         struct Node* temp = graph->list_of_adjacency_lists[v];
-        printf("%d --->", v);
+        _INF printf("%d --->", v);
         while (temp)
         {
             printf(" %d ->", temp->node_id);
@@ -84,13 +149,40 @@ void printGraph(struct Graph* graph)
     }
 }
 
-struct Writer
+// Function to count the number of used indices in the adjacency list
+int CountUsedIndexes(struct Graph* graph)
 {
-    char name[MAX_NAME_LEN];
-    char orcid[20];
-};
+    int count = 0;
+// Iterate over all vertices
+    for (int i = 0; i < graph->numVertices; i++)
+    {
+// Check if the adjacency list for vertex i is non-empty
+        if (graph->list_of_adjacency_lists[i] != NULL)count++;
+    }
+    return count;
+}
 
-int ExcelKatledici(struct Writer *place_holder)
+void FreeGraph(struct Graph* graph)
+{
+// Free each adjacency list (list of nodes) in the graph
+    for (int i = 0; i < graph->numVertices; i++)
+    {
+        struct Node* current = graph->list_of_adjacency_lists[i];
+// Free each node in the adjacency list
+        while (current != NULL)
+        {
+            struct Node* temp = current;
+            current = current->next;
+            free(temp);
+        }
+    }
+// Free the array of adjacency lists
+    free(graph->list_of_adjacency_lists);
+// Free the graph itself
+    free(graph);
+}
+
+int ExcelKatledici(struct Author* data_list, struct Graph* main_graph)
 {
 // opens the file
     xlsxioreader excelci;
@@ -116,20 +208,21 @@ int ExcelKatledici(struct Writer *place_holder)
         xlsxioread_sheetlist_close(sheetlist);
     }
 //read values from first sheet
-    int row_no = 0;
-    char cell_no = 0;
-    char *orcid = calloc(1,20);
-    char *writer_name = calloc(1,MAX_NAME_LEN);
-    int writer_pos=0; // dont get confused, this is only used to place writers on the list and doesnt indicate much
-    char* value;
-    _INF printf("Contents of first sheet:\n");
+    int row_no = 0; char cell_no = 0;
+    char *orcid = malloc(ORCID_LEN); memset(orcid, 0, ORCID_LEN);
+    char *author_name = malloc(MAX_NAME_LEN); memset(author_name, 0, MAX_NAME_LEN);
+    char author_pos = 0;
+    char *npc_list = malloc(LONG_STRING_LEN); memset(npc_list, 0, LONG_STRING_LEN);
+    char *paper = malloc(LONG_STRING_LEN); memset(npc_list, 0, LONG_STRING_LEN);
+    char *value;
+    //_INF printf("Contents of first sheet:\n");
     xlsxioreadersheet sheet = xlsxioread_sheet_open(excelci, NULL, XLSXIOREAD_SKIP_EMPTY_ROWS);
     xlsxioread_sheet_next_row(sheet);
     while (xlsxioread_sheet_next_row(sheet))
     {
-        if(row_no%10000==0)
+        if(row_no%100==0) //77860
         {
-            _INF printf("At row no: %d\r",row_no);
+            {_INF write(1,"At row no: ",11); printf("%d",row_no); write(1,"\n",1);}
         }
         while ((value = xlsxioread_sheet_next_cell(sheet)) != NULL)
         {
@@ -138,45 +231,180 @@ int ExcelKatledici(struct Writer *place_holder)
             {
                 case 1: strcpy(orcid,value); break;
                 case 2: continue;
-                case 4: strcpy(writer_name,value); break;
+                case 3: author_pos = atoi(value); break;
+                case 4: strcpy(author_name,value); break;
+                case 5:
+                    {
+                        if(strlen(value)>=LONG_STRING_LEN){_WRN write(1, "Overflow warning: author list too long for LONG_STRING_LEN, consider increasing the limit.\n", 91);}
+                        else{strcpy(npc_list,value); break;}
+                    }
+                case 6:
+                    {
+                        if(strlen(value)>=MAX_PAPER_LEN){_WRN write(1, "Overflow warning: paper name too long for MAX_PAPER_LEN, consider increasing the limit.\n", 90);}
+                        else{strcpy(paper,value); break;}
+                    }
                 default: continue;
             }
-            ///_INF printf("Switch case success.\n");
-
-            if(strncmp(orcid,place_holder[writer_pos-1].orcid,20)!=0 || writer_pos==0)
-            {
-                ///_INF printf("Inside the if statement.\n");
-                strncpy(place_holder[writer_pos].orcid, orcid, 20);
-                ///_INF printf("Here is resulting orcid %s\n",orcid);
-                strncpy(place_holder[writer_pos].name, writer_name, MAX_NAME_LEN);
-                if(cell_no==4)writer_pos++;
-            }
-            ///_INF printf("If statement success.\n");
             free(value);
         }
+        RouteInfoToNecessaryFunctions(data_list, orcid, author_pos, author_name, npc_list, paper, main_graph);
+// here it is here you know what to put here put it here please do it
         cell_no=0;
         row_no++;
     }
     xlsxioread_sheet_close(sheet);
 //clean up
     xlsxioread_close(excelci);
-    writer_pos--;
     _INF printf("Finished scanning xlsx file.\n");
-    _INF printf("Found %d unique authors.\n", writer_pos);
-    return writer_pos;
+    return author_pos;
 }
 
-int main()
+
+
+// FindCountOfChar()
+// PickString() and RouteInfoToNecessaryFunctions() several times
+// RouteInfoToNecessaryFunctions auto calls GraphPreparation which auto calls FindFirstEmptyAuthorSlot and FindFirstEmptyPaperSlot so it works
+//void Penetrate(struct Author* data_list, char* orcid, char* author_name, char author_pos, char* npc_list, char* paper)
+//{
+//    RouteInfoToNecessaryFunctions(data_list, orcid, )
+//}
+
+
+// tells you how many times a given char has appeared in the string
+int FindCountOfChar(char *value, char identifier)
 {
-    int writer_count = 0;
-    struct Writer *writer_list = (struct Writer*)malloc(MAXUINT32);
-    memset(writer_list,0,sizeof(*writer_list));
-    writer_count = ExcelKatledici(writer_list);
-    /*for(int i=0; i<writer_count ;i++)
+    int identifier_count = 0;
+    for(int i=0; i<strlen(value) ;i++)
     {
-        _INF printf("%s , %s\n", writer_list[i].orcid, writer_list[i].name);
-    }*/
+        if(value[i]==identifier) identifier_count++;
+    }
+    ///_DBG printf("FindCountOfChar has returned: %d",identifier_count+1);
+    return (identifier_count+1);
 }
+
+// PickStrings the names out of long string, can be customized to take escape character into account
+char* PickString(char* long_string, int target_index, char encaser, char separator, char use_safe_mode)
+{
+    char* short_string = malloc(MAX_NAME_LEN);
+    memset(short_string,0,MAX_NAME_LEN);
+// go until end of the string (we will likely break out of this loop)
+    int i=0, start=0, end=0;
+    for(int index=0; index<target_index ;index++)
+    {
+        while(long_string[i]!=separator && long_string[i]!=0)i++;
+        i++;
+    }
+// below is to give warning if lick function takes bad input, theres many of it
+    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
+
+    while(long_string[i]!=encaser && long_string[i]!=0)i++;
+    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
+    ///_DBG printf("PickString i: %d\n",i);
+    start=i;
+    i++;
+    SAFE:
+    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
+    while(long_string[i]!=encaser && long_string[i]!=0)i++;
+    ///_DBG printf("PickString i-1: %c\n",long_string[i]);
+    if(use_safe_mode==1 && !(long_string[i+1]==',' || long_string[i+1]==']')){i++;goto SAFE;}
+    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
+    ///_DBG printf("PickString i: %d\n",i);
+    end=i;
+    for(int s=start+1, j=0; s<end ;s++, j++)
+    {
+        short_string[j]=long_string[s];
+    }
+    ///_DBG printf("PickString has returned \"%s\"\n",short_string);
+    return short_string;
+}
+
+// you give information, it prepares it and sends it to the big function (ravish) which then lists it
+void RouteInfoToNecessaryFunctions(struct Author* data_list, char* orcid, int mc_pos, char* mc_name, char* npc_names, char* paper, struct Graph* main_graph)
+{
+    struct Author carrier;
+    strcpy(carrier.orcid, orcid);
+    strcpy(carrier.name, mc_name);
+    strcpy(carrier.papers[0].name, paper);
+    ///_DBG printf("Sending to ravish: name:\"%s\" orcid:\"%s\" paper:\"%s\" \n", carrier.name, carrier.orcid, carrier.papers[0].name);
+    int big_boss_node_id = GraphPreparation(data_list, carrier, -1, main_graph);
+    memset(carrier.orcid, 0, sizeof(carrier.orcid));
+    int npc_count = FindCountOfChar(npc_names, ',');
+    for(int i=0; i<npc_count ;i++)
+    {
+        if(i==mc_pos-1) continue;
+        strcpy(carrier.name, PickString(npc_names, i, '\'', ',', 1));
+        ///_DBG printf("Sending to ravish: name:\"%s\" orcid:\"%s\" paper:\"%s\" \n", carrier.name, carrier.orcid, carrier.papers[0].name);
+        GraphPreparation(data_list, carrier, big_boss_node_id, main_graph);
+    }
+    return;
+};
+
+int GraphPreparation(struct Author* data_list, struct Author new_recruit, int big_boss_node_id, struct Graph* main_graph)
+{
+    ///_DBG write(1, "Before FindFirstEmptyAuthorSlot.\n", 15);
+    int first_empty_index = FindFirstEmptyAuthorSlot(data_list);
+    ///_DBG write(1, "Past FindFirstEmptyAuthorSlot.\n", 13);
+    int i=0;
+    for(i=0; i<first_empty_index ;i++)
+    {
+        if(strcmp(new_recruit.name, data_list[i].name)==0) goto FOUNDHIM;
+    }
+    ///_DBG write(1, "Past for loop.\n", 15);
+    strcpy(data_list[first_empty_index].name, new_recruit.name);
+    strcpy(data_list[first_empty_index].papers[FindFirstEmptyPaperSlot(data_list[first_empty_index].papers)].name, new_recruit.orcid);
+    ///_DBG write(1, "Past copying.\n", 14);
+    if(new_recruit.orcid[0]!='0')
+    {
+        Edge(main_graph, big_boss_node_id, first_empty_index);
+        return -1;
+    }
+    else
+    {
+        strcpy(data_list[first_empty_index].orcid, new_recruit.orcid);
+        return first_empty_index;
+    }
+    return -1;
+    FOUNDHIM:
+    strcpy(data_list[i].papers[FindFirstEmptyPaperSlot(data_list[i].papers)].name, new_recruit.orcid);
+    if(big_boss_node_id == -1) return i;
+    return -1;
+}
+
+// finds and returns the index of first empty name space on array
+uint32_t FindFirstEmptyAuthorSlot(struct Author* data_list)
+{
+    for(uint32_t i=0; i<DATABASE_SIZE ;i++)
+    {
+        ///_DBG printf("%d\n",i);
+        if(data_list[i].name[0] == 0)
+        {
+            ///_DBG printf("FindFirstEmptyAuthorSlot has returned %d.\n",i);
+            return i;
+        }
+    }
+    _ERR write(1, "Overflow error: Main storage array has ran out of space, code will not work!\n", 77);
+    return -1;
+}
+
+// same as caress except it does so on papers list
+uint16_t FindFirstEmptyPaperSlot(struct Paper* papers)
+{
+    for(uint16_t i=0; i<PAPER_LIMIT ;i++)
+    {
+        if(papers[i].name[0] == 0)
+        {
+            ///_DBG printf("FindFirstEmptyPaperSlot has returned %d.\n",i);
+            return i;
+        }
+    }
+    _WRN write(1, "Overwrite warning: Paper limit was exceeded, last index will be overwritten.\n", 77);
+    return PAPER_LIMIT-1;
+}
+
+
+
+
+
 
 
 

@@ -18,6 +18,7 @@
 #define _ERR write(1, "\x1b[31mERROR: ", 13);
 #define _WRN write(1, "\x1b[33mWARNING: ", 15);
 #define _DBG write(1, "\x1b[36mDEBUG: ", 13);
+#define _INP write(1, "\x1b[95mINPUT: ", 13);
 
 struct Paper
 {
@@ -41,9 +42,9 @@ struct Node
 // structure to represent the graph
 struct Graph
 {
-    int numVertices;
+    int vertice_number;
     struct Node** list_of_adjacency_lists;
-    int isDirected;
+    int is_directed;
 };
 
 
@@ -57,11 +58,14 @@ char* PickString(char* long_string, int target_index, char encaser, char separat
 int ExcelKatledici(struct Author* data_list, struct Graph* main_graph);
 int ExcelYaglayici();
 struct Node* createNode(int v);
-struct Graph* createGraph(int vertices, char isDirected);
+struct Graph* createGraph(int vertices, char is_directed);
 void Edge(struct Graph* graph, int src, int dest);
 void PrintGraph(struct Graph* graph);
 int CountUsedIndexes(struct Graph* graph);
 void FreeGraph(struct Graph* graph);
+int Register5(struct Graph* main_graph, struct Author* data_list, int index);
+void PrintNodeInfo(int node_id, struct Author* data_list, int which_one);
+int Register6(struct Graph* main_graph, struct Author* data_list);
 
 int main()
 {
@@ -91,6 +95,46 @@ int main()
         write(1, "\n", 1);
     }
     PrintGraph(main_graph);
+    int choice=0;
+    int register_parameter_1;
+    while(1)
+    {
+        _INP printf("Please select a register to be shown from below:"
+                    "\n1-) INCOMPLETE"
+                    "\n2-) INCOMPLETE"
+                    "\n3-) INCOMPLETE"
+                    "\n4-) INCOMPLETE"
+                    "\n5-) Display all cooperations of an author"
+                    "\n6-) Display the author with most cooperations"
+                    "\n7-) INCOMPLETE"
+                    "\n8-) Force exit program\n");
+        _INP scanf("%d",&choice);
+        switch(choice)
+        {
+        case 1: break;
+        case 2: break;
+        case 3: break;
+        case 4: break;
+        case 5:
+            {
+                int coop_no = 0;
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_1);
+                coop_no = Register5(main_graph, data_list, register_parameter_1);
+                _INF printf("Author has done a total of %d cooperations.\n",coop_no);
+                break;
+            }
+        case 6:
+            {
+                int max_coops_id=0;
+                max_coops_id = Register6(main_graph, data_list);
+                _INF printf("The author with the most cooperations is \""); PrintNodeInfo(max_coops_id, data_list, 0); printf("\".\n");
+            }
+        case 7: break;
+        case 8: exit(0); break;
+        default: _WRN printf("Please pick one of the options presented\n"); break;
+        }
+    }
 }
 
 // function to create a new node
@@ -103,11 +147,11 @@ struct Node* createNode(int v)
 }
 
 // function to create a graph
-struct Graph* createGraph(int vertices, char isDirected)
+struct Graph* createGraph(int vertices, char is_directed)
 {
     struct Graph* graph = malloc(sizeof(struct Graph));
-    graph->numVertices = vertices;
-    graph->isDirected = isDirected;
+    graph->vertice_number = vertices;
+    graph->is_directed = is_directed;
 // create an array of adjacency lists
     graph->list_of_adjacency_lists = malloc(vertices * sizeof(struct Node*));
 // empties the adjacency lists
@@ -124,7 +168,7 @@ void Edge(struct Graph* graph, int src, int dest)
     graph->list_of_adjacency_lists[src] = newNode;
 
 // if the graph is undirected, add an edge from dest to src as well
-    if (!graph->isDirected)
+    if (!graph->is_directed)
     {
         newNode = createNode(src);
         newNode->next = graph->list_of_adjacency_lists[dest];
@@ -136,7 +180,7 @@ void Edge(struct Graph* graph, int src, int dest)
 void PrintGraph(struct Graph* graph)
 {
     _INF printf("Adjacency List\n");
-    for (int v = 0; v < graph->numVertices; v++)
+    for (int v = 0; v < graph->vertice_number; v++)
     {
         struct Node* temp = graph->list_of_adjacency_lists[v];
         _INF printf("%d --->", v);
@@ -154,7 +198,7 @@ int CountUsedIndexes(struct Graph* graph)
 {
     int count = 0;
 // Iterate over all vertices
-    for (int i = 0; i < graph->numVertices; i++)
+    for (int i = 0; i < graph->vertice_number; i++)
     {
 // Check if the adjacency list for vertex i is non-empty
         if (graph->list_of_adjacency_lists[i] != NULL)count++;
@@ -165,7 +209,7 @@ int CountUsedIndexes(struct Graph* graph)
 void FreeGraph(struct Graph* graph)
 {
 // Free each adjacency list (list of nodes) in the graph
-    for (int i = 0; i < graph->numVertices; i++)
+    for (int i = 0; i < graph->vertice_number; i++)
     {
         struct Node* current = graph->list_of_adjacency_lists[i];
 // Free each node in the adjacency list
@@ -259,17 +303,6 @@ int ExcelKatledici(struct Author* data_list, struct Graph* main_graph)
     return author_pos;
 }
 
-
-
-// FindCountOfChar()
-// PickString() and RouteInfoToNecessaryFunctions() several times
-// RouteInfoToNecessaryFunctions auto calls GraphPreparation which auto calls FindFirstEmptyAuthorSlot and FindFirstEmptyPaperSlot so it works
-//void Penetrate(struct Author* data_list, char* orcid, char* author_name, char author_pos, char* npc_list, char* paper)
-//{
-//    RouteInfoToNecessaryFunctions(data_list, orcid, )
-//}
-
-
 // tells you how many times a given char has appeared in the string
 int FindCountOfChar(char *value, char identifier)
 {
@@ -351,7 +384,7 @@ int GraphPreparation(struct Author* data_list, struct Author new_recruit, int bi
     }
     ///_DBG write(1, "Past for loop.\n", 15);
     strcpy(data_list[first_empty_index].name, new_recruit.name);
-    strcpy(data_list[first_empty_index].papers[FindFirstEmptyPaperSlot(data_list[first_empty_index].papers)].name, new_recruit.orcid);
+    strcpy(data_list[first_empty_index].papers[FindFirstEmptyPaperSlot(data_list[first_empty_index].papers)].name, new_recruit.papers[0].name);
     ///_DBG write(1, "Past copying.\n", 14);
     if(new_recruit.orcid[0]!='0')
     {
@@ -365,7 +398,7 @@ int GraphPreparation(struct Author* data_list, struct Author new_recruit, int bi
     }
     return -1;
     FOUNDHIM:
-    strcpy(data_list[i].papers[FindFirstEmptyPaperSlot(data_list[i].papers)].name, new_recruit.orcid);
+    strcpy(data_list[i].papers[FindFirstEmptyPaperSlot(data_list[i].papers)].name, new_recruit.papers[0].name);
     if(big_boss_node_id == -1) return i;
     return -1;
 }
@@ -386,7 +419,7 @@ uint32_t FindFirstEmptyAuthorSlot(struct Author* data_list)
     return -1;
 }
 
-// same as caress except it does so on papers list
+// same as FindFirstEmptyAuthorSlot except it does so on papers list
 uint16_t FindFirstEmptyPaperSlot(struct Paper* papers)
 {
     for(uint16_t i=0; i<PAPER_LIMIT ;i++)
@@ -401,7 +434,57 @@ uint16_t FindFirstEmptyPaperSlot(struct Paper* papers)
     return PAPER_LIMIT-1;
 }
 
+int Register5(struct Graph* main_graph, struct Author* data_list, int index)
+{
+    struct Node* current = main_graph->list_of_adjacency_lists[index];  // Use a temporary pointer
+    int coauthor_no = 0;
 
+    while (current != NULL)  // Traverse the adjacency list
+    {
+        coauthor_no++;  // Count the number of coauthors
+        current = current->next;  // Move to the next node
+    }
+
+    return coauthor_no;
+}
+
+// you give it authors id and an integer signifying what you want, it then proceeds to print it
+void PrintNodeInfo(int node_id, struct Author* data_list, int which_one)
+{
+    switch(which_one)
+    {
+        case 0: printf("%s",data_list[node_id].name); break;
+        case 1: printf("%s",data_list[node_id].orcid); break;
+        case 2:
+            {
+                int i=0;
+                printf("Full list of author's papers:\n");
+                while(data_list[node_id].papers[i].name[0]!=0)
+                {
+                    _INF printf("\t%s\n",data_list[node_id].papers[i].name);
+                    i++;
+                }
+                break;
+            }
+    }
+}
+
+int Register6(struct Graph* main_graph, struct Author* data_list)
+{
+    int most = -1, coop_no_max = 0, temp=0;
+    for(int i=0; i<main_graph->vertice_number ;i++)
+    {
+        temp = Register5(main_graph, data_list, i);
+        if(temp>coop_no_max)
+        {
+            coop_no_max=temp;
+            most=i;
+        }
+    }
+    _DBG printf("with %d cooperations, author's id: %d\n",coop_no_max, most);
+    //_DBG PrintNodeInfo(most, data_list, 2);
+    return most;
+}
 
 
 

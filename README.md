@@ -1,4 +1,1 @@
-buraya önemli notlarını yaz
-maine eklediğim kod sadece exceli çekiyo, başka hiçbi işi yok
--tamam -kağan
-
+Sadece ister 3 ve 4 kaldı!

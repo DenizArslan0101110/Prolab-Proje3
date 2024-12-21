@@ -7,13 +7,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#define PAPER_LIMIT 400
-#define LONG_STRING_LEN 8192
-#define MAX_PAPER_LEN 2048
-#define MAX_NAME_LEN 64
-#define ORCID_LEN 24
-#define DATABASE_SIZE 4096
-
 #include "Structs.h"
 
 int FindCountOfChar(char *value, char identifier);

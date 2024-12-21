@@ -32,22 +32,37 @@ int main()
     PrintGraph(main_graph);
     int choice=0;
     int register_parameter_1;
+    int register_parameter_2;
     while(1)
     {
         _INP printf("Please select a register to be shown from below:"
-                    "\n1-) INCOMPLETE"
-                    "\n2-) INCOMPLETE"
+                    "\n1-) Display shortest path between two authors"
+                    "\n2-) Display cooperations of an author in a queue"
                     "\n3-) INCOMPLETE"
                     "\n4-) INCOMPLETE"
                     "\n5-) Display all cooperations of an author"
                     "\n6-) Display the author with most cooperations"
-                    "\n7-) INCOMPLETE"
+                    "\n7-) Display longest path from an author"
                     "\n8-) Force exit program\n");
         _INP scanf("%d",&choice);
         switch(choice)
         {
-        case 1: break;
-        case 2: break;
+        case 1:
+            {
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_1);
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_2);
+                Register1(main_graph, data_list, register_parameter_1, register_parameter_2);
+                break;
+            }
+        case 2:
+            {
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_1);
+                Register2(main_graph, data_list, register_parameter_1);
+                break;
+            }
         case 3: break;
         case 4: break;
         case 5:
@@ -64,10 +79,19 @@ int main()
                 int max_coops_id=0;
                 max_coops_id = Register6(main_graph, data_list);
                 _INF printf("The author with the most cooperations is \""); PrintNodeInfo(max_coops_id, data_list, 0); printf("\".\n");
+                break;
             }
-        case 7: break;
+        case 7:
+            {
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_1);
+                Register7(main_graph, data_list, register_parameter_1);
+                break;
+            }
         case 8: exit(0); break;
         default: _WRN printf("Please pick one of the options presented\n"); break;
         }
     }
 }
+
+

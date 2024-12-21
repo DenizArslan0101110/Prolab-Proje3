@@ -86,11 +86,9 @@ void UpdateEdgeWeightUndirected(struct Graph* graph, int src, int dest, int newW
 
 void FreeGraph(struct Graph* graph)
 {
-// Free each adjacency list (list of nodes) in the graph
     for (int i = 0; i < graph->vertice_number; i++)
     {
         struct Node* current = graph->list_of_adjacency_lists[i];
-// Free each node in the adjacency list
         while (current != NULL)
         {
             struct Node* temp = current;
@@ -98,9 +96,7 @@ void FreeGraph(struct Graph* graph)
             free(temp);
         }
     }
-// Free the array of adjacency lists
     free(graph->list_of_adjacency_lists);
-// Free the graph itself
     free(graph);
 }
 
@@ -108,10 +104,8 @@ void FreeGraph(struct Graph* graph)
 int CountUsedIndexes(struct Graph* graph)
 {
     int count = 0;
-// Iterate over all vertices
     for (int i = 0; i < graph->vertice_number; i++)
     {
-// Check if the adjacency list for vertex i is non-empty
         if (graph->list_of_adjacency_lists[i] != NULL)count++;
     }
     return count;
@@ -157,4 +151,130 @@ void AssignEdgesToEveryone(struct Graph* main_graph, struct Author* data_list, i
             if(teamwork_amount>0)UpdateEdgeWeightUndirected(main_graph, i, j, teamwork_amount);
         }
     }
+}
+
+// Dijkstra's algorithm
+void Dijkstra(struct Graph* graph, int source, int* dist, int* prev)
+{
+    int num_vertices = graph->vertice_number;
+    int* visited = (int*)malloc(num_vertices * sizeof(int));
+// initializes the arrays
+    for(int i=0; i < num_vertices; i++)
+    {
+        dist[i] = INT_MAX;
+        prev[i] = -1;
+        visited[i] = 0;
+    }
+    dist[source] = 0;
+    struct Queue* queue = CreateQueue(num_vertices);
+    Enqueue(queue, source);
+    _DBG printf("%d added to queue.\n", source);
+// Main loop here
+    while(queue->size > 0)
+    {
+        int u = Dequeue(queue);
+        _DBG printf("%d removed from queue.\n", u);
+        visited[u] = 1;
+// gets the connections of the node we just completed (it will loop through them)
+        struct Node* adj = graph->list_of_adjacency_lists[u];
+        while (adj != NULL)
+        {
+            int v = adj->node_id;
+            int weight = adj->weight;
+            if (dist[u] + weight < dist[v])
+            {
+                dist[v] = dist[u] + weight;
+                prev[v] = u;
+                if (!visited[v])
+                {
+// Add v to the queue (it will loop through its connections as well)
+                    Enqueue(queue, v);
+                    _DBG printf("%d added to queue.\n", v);
+                }
+            }
+            adj = adj->next;
+        }
+    }
+    free(visited);
+    free(queue->data);
+    free(queue);
+}
+
+// Longest Path (Dijkstra but longer)
+void LongestPath(struct Graph* graph, int source, int* dist, int* prev)
+{
+    int num_vertices = graph->vertice_number;
+    int* visited = (int*)malloc(num_vertices * sizeof(int));
+// initializes the arrays
+    for (int i = 0; i < num_vertices; i++)
+    {
+        dist[i] = INT_MIN;
+        prev[i] = -1;
+        visited[i] = 0;
+    }
+    dist[source] = 0;
+    struct Queue* queue = CreateQueue(num_vertices);
+    Enqueue(queue, source);
+
+// Main loop here
+    while (queue->size > 0)
+    {
+        int u = Dequeue(queue);
+        visited[u] = 1;
+
+// Relax the edges of node u
+        struct Node* adj = graph->list_of_adjacency_lists[u];
+        while (adj != NULL)
+        {
+            int v = adj->node_id;
+            int weight = adj->weight;
+            if (dist[u] + weight > dist[v])
+            {
+                dist[v] = dist[u] + weight;
+                prev[v] = u;
+                if (!visited[v])
+                {
+// Add v to the queue (it will loop through its connections as well)
+                    Enqueue(queue, v);
+                }
+            }
+            adj = adj->next;
+        }
+    }
+    free(visited);
+    free(queue->data);
+    free(queue);
+}
+
+// Function to print the absolute longest path
+void PrintLongestPath(int* dist, int* prev, int num_vertices, int source)
+{
+// Find the node with the longest distance (max in dist[])
+    int target = -1;
+    int max_distance = INT_MIN;
+
+    for (int i = 0; i < num_vertices; i++)
+    {
+        if (dist[i] > max_distance && dist[i] != INT_MAX)
+        {
+            max_distance = dist[i];
+            target = i;
+        }
+    }
+    if (target == -1 || max_distance == INT_MIN) { _WRN printf("No path exists from the source to any node.\n"); return; }
+
+// Backtrack using prev[] to reconstruct the longest path
+    int* path = (int*)malloc(num_vertices * sizeof(int));
+    int index = 0;
+
+// Backtrack from target to source
+    for (int current=target; current!=-1; current=prev[current]) path[index++] = current;
+
+// Print the longest path (reversed)
+    _INF printf("Longest path from %d has a distance of %d, and is as follows: \n", source, max_distance);
+    int i=index-1;
+    printf("%d ", path[i]);
+    for (i=index-2; i >= 0; i--) printf(" ---> %d ", path[i]);
+    printf("\n");
+    free(path);
 }

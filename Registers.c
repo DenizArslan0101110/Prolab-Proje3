@@ -1,28 +1,34 @@
 #include "Parse.h"
 #include "Graph.h"
 #include "Registers.h"
+#include "Tree.h"
 
-int Register1(struct Graph* main_graph, struct Author* data_list, int start, int finish)
+struct Queue* queue = NULL;
+
+int Register1(struct Graph* main_graph, struct Author* data_list, int start, int finish, int is_simple)
 {
     int* dist = (int*)malloc(main_graph->vertice_number * sizeof(int));
     int* prev = (int*)malloc(main_graph->vertice_number * sizeof(int));
-    Dijkstra(main_graph, start, dist, prev);
-    for(int i=0; i<main_graph->vertice_number ;i++)
+    queue = Dijkstra(main_graph, start, dist, prev, is_simple);
+    if(!is_simple)
     {
-        write(1,"\x1b[0m",4);
-        if(i==start) {write(1, "\x1b[44mSTRT: ", 11); goto PRINTING;}
-        else if(i==finish) {write(1, "\x1b[44mFNSH: ", 11);goto PRINTING;}
-        else if(dist[i]<INT_MAX) {_INF goto PRINTING;}
-        else goto NOTPRINTING;
-        PRINTING:
-            write(1,"node_id: ",9);
-            char iii[10]; int leng=snprintf(iii,sizeof(iii),"%d",i); write(1, iii, leng); snprintf(iii, 10-leng, "          "); write(1,iii,10-leng); write(1,"previous_node: ",15);
-            char prevus[10]; int lengg=snprintf(prevus,sizeof(prevus),"%d",prev[i]); write(1, prevus, lengg); snprintf(prevus, 10-lengg, "          "); write(1,prevus,10-lengg); write(1,"distance: ",10);
-            char distace[10]; int lenggg=snprintf(distace,sizeof(distace),"%d",dist[i]); write(1, distace, lenggg); snprintf(distace, 10-lenggg, "          "); write(1,distace,10-lenggg);
-            write(1,"\x1b[0m\n",5);
-        NOTPRINTING:
+        for(int i=0; i<main_graph->vertice_number ;i++)
+        {
+            write(1,"\x1b[0m",4);
+            if(i==start) {write(1, "\x1b[44mSTRT: ", 11); goto PRINTING;}
+            else if(i==finish) {write(1, "\x1b[44mFNSH: ", 11);goto PRINTING;}
+            else if(dist[i]<INT_MAX) {_INF goto PRINTING;}
+            else goto NOTPRINTING;
+            PRINTING:
+                write(1,"node_id: ",9);
+                char iii[10]; int leng=snprintf(iii,sizeof(iii),"%d",i); write(1, iii, leng); snprintf(iii, 10-leng, "          "); write(1,iii,10-leng); write(1,"previous_node: ",15);
+                char prevus[10]; int lengg=snprintf(prevus,sizeof(prevus),"%d",prev[i]); write(1, prevus, lengg); snprintf(prevus, 10-lengg, "          "); write(1,prevus,10-lengg); write(1,"distance: ",10);
+                char distace[10]; int lenggg=snprintf(distace,sizeof(distace),"%d",dist[i]); write(1, distace, lenggg); snprintf(distace, 10-lenggg, "          "); write(1,distace,10-lenggg);
+                write(1,"\x1b[0m\n",5);
+            NOTPRINTING:
+        }
     }
-    if(prev[finish]==-1) {_WRN printf("Shortest path between %d and %d could not be found, nodes are not connected.\n",start,finish);}
+    if(prev[finish]==-1 && !is_simple) {_WRN printf("Shortest path between %d and %d could not be found, nodes are not connected.\n",start,finish);}
     if(prev[finish]!=-1)
     {
         _INF printf("Shortest path between %d and %d has a distance of %d, and is as follows: \n", start, finish, dist[finish]);
@@ -93,6 +99,80 @@ void Register2(struct Graph* main_graph, struct Author* data_list, int index)
 
 }
 
+void Register3(struct Graph* main_graph, struct Author* data_list)
+{
+    if(queue == NULL){ _WRN printf("Queue does not exists, try Register 1 first.");}
+    int list[512]; memset(list,-1,512*sizeof(int));
+    int element = -1; int i=0;
+    while((element = Dequeue(queue)) != -1 && i<512)
+    {
+        list[i] = element;
+        i++;
+    }
+// code chunk below destroys any duplicates in the list and sorts them into order (This is the worst code I have ever written but it works)
+    for(int aaa=0; aaa<512 ;aaa++)
+    {
+        int spy = 0;
+        if(list[aaa]!=-1) spy = list[aaa];
+        for(int bbb=0; bbb<512 ;bbb++)
+        {
+            if(list[bbb]==spy && aaa!=bbb) list[bbb] = -1;
+        }
+    }
+    for(int aaa=0; aaa<512 ;aaa++)
+    {
+        if(list[aaa]==-1 && list[aaa+1]!=-1)
+        {
+            list[aaa] = list[aaa+1];
+            list[aaa+1] = -1;
+            if(aaa>0) aaa--;
+        }
+    }
+    i--;
+    struct BSDNode* binary_search_tree = CreateBSDNode(list[i]);
+    i--;
+    for(; i>0 ;i--)
+    {
+        Insert(binary_search_tree, list[i]);
+    }
+    _INF printf("Binary Search tree of the queue: \n");
+    PrintInOrder(binary_search_tree);
+    _INP printf("Which index would you like to delete off of the binary search tree?\n");
+    int input = -1;
+    scanf("%d", &input);
+    Remove(binary_search_tree, input);
+    _INF printf("Binary Search tree of the queue after deletion: \n");
+    PrintInOrder(binary_search_tree);
+}
+
+void Register4(struct Graph* main_graph, struct Author* data_list, int index)
+{
+    if(data_list[index].orcid[0]!=0)
+    {
+        _WRN printf("Given author has no connections of depth \"2\" and as such, cant be calculated.\n");
+        goto FUCKTHISIMOUT;
+    }
+    int to_visit[512]; memset(to_visit, -1, 512*sizeof(int));
+    struct Node* current = main_graph->list_of_adjacency_lists[index];
+    struct Node* current2 = NULL;
+    int i=0;
+    while (current != NULL)
+    {
+        current2 = main_graph->list_of_adjacency_lists[current->node_id];
+            while (current2 != NULL)
+            {
+                to_visit[i] = current2->node_id; i++;
+                current2 = current2->next;
+            }
+        current = current->next;
+    }
+    for(i=0; to_visit[i] != -1 ;i++)
+    {
+        Register1(main_graph, data_list, index, to_visit[i], 1);
+    }
+    FUCKTHISIMOUT:
+}
+
 int Register5(struct Graph* main_graph, struct Author* data_list, int index)
 {
     struct Node* current = main_graph->list_of_adjacency_lists[index];
@@ -126,7 +206,7 @@ int Register7(struct Graph* main_graph, struct Author* data_list, int start)
 {
     int* dist = (int*)malloc(main_graph->vertice_number * sizeof(int));
     int* prev = (int*)malloc(main_graph->vertice_number * sizeof(int));
-    Dijkstra(main_graph, start, dist, prev);
+    Dijkstra(main_graph, start, dist, prev, 1);
     for(int i=0; i<main_graph->vertice_number ;i++)
     {
         write(1,"\x1b[0m",4);

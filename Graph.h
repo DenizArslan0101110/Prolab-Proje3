@@ -35,7 +35,7 @@ void UpdateEdgeWeight(struct Graph* graph, int src, int dest, int newWeight);
 int CountUsedIndexes(struct Graph* graph);
 void PrintNodeInfo(int node_id, struct Author* data_list, int which_one);
 void AssignEdgesToEveryone(struct Graph* main_graph, struct Author* data_list, int actual_used);
-void Dijkstra(struct Graph* graph, int source, int* dist, int* prev);
+struct Queue* Dijkstra(struct Graph* graph, int source, int* dist, int* prev, int is_simple);
 void LongestPath(struct Graph* graph, int source, int* dist, int* prev);
 void PrintLongestPath(int* dist, int* prev, int num_vertices, int source);
 

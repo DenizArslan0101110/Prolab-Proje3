@@ -50,7 +50,7 @@ void PrintGraph(struct Graph* graph)
         _INF printf("%d --->", i);
         while (temp)
         {
-            printf(" %d (w: %d) ", temp->node_id, temp->weight);
+            printf(" %d (w: %d) --->", temp->node_id, temp->weight);
             temp = temp->next;
         }
         write(1," NULL\n",6);
@@ -73,7 +73,7 @@ void UpdateEdgeWeight(struct Graph* graph, int src, int dest, int newWeight)
         temp = temp->next;
     }
 // If the destination node was not found in the adjacency list
-    _WRN write(1,"Not found warning: Specified edge could not be found.",54); char wrncnt[20]; int len=snprintf(wrncnt,sizeof(wrncnt),"%d",global_not_found_counter++); write(1, wrncnt, len); write(1,"\r",1);
+    ///_WRN write(1,"Not found warning: Specified edge could not be found.",54); char wrncnt[20]; int len=snprintf(wrncnt,sizeof(wrncnt),"%d",global_not_found_counter++); write(1, wrncnt, len); write(1,"\r",1);
     ///_DBG printf("source: %d, destination: %d\n",src,dest);
 }
 
@@ -154,7 +154,7 @@ void AssignEdgesToEveryone(struct Graph* main_graph, struct Author* data_list, i
 }
 
 // Dijkstra's algorithm
-void Dijkstra(struct Graph* graph, int source, int* dist, int* prev)
+struct Queue* Dijkstra(struct Graph* graph, int source, int* dist, int* prev, int is_simple)
 {
     int num_vertices = graph->vertice_number;
     int* visited = (int*)malloc(num_vertices * sizeof(int));
@@ -167,13 +167,15 @@ void Dijkstra(struct Graph* graph, int source, int* dist, int* prev)
     }
     dist[source] = 0;
     struct Queue* queue = CreateQueue(num_vertices);
+    struct Queue* queue2_electric_boogaloo = CreateQueue(num_vertices);
     Enqueue(queue, source);
-    _DBG printf("%d added to queue.\n", source);
+    Enqueue(queue2_electric_boogaloo, source);
+    if(!is_simple){_DBG printf("%d added to queue.\n", source);}
 // Main loop here
     while(queue->size > 0)
     {
         int u = Dequeue(queue);
-        _DBG printf("%d removed from queue.\n", u);
+        if(!is_simple){_DBG printf("%d removed from queue.\n", u);}
         visited[u] = 1;
 // gets the connections of the node we just completed (it will loop through them)
         struct Node* adj = graph->list_of_adjacency_lists[u];
@@ -189,15 +191,15 @@ void Dijkstra(struct Graph* graph, int source, int* dist, int* prev)
                 {
 // Add v to the queue (it will loop through its connections as well)
                     Enqueue(queue, v);
-                    _DBG printf("%d added to queue.\n", v);
+                    Enqueue(queue2_electric_boogaloo, v);
+                    if(!is_simple){_DBG printf("%d added to queue.\n", v);}
                 }
             }
             adj = adj->next;
         }
     }
     free(visited);
-    free(queue->data);
-    free(queue);
+    return queue2_electric_boogaloo;
 }
 
 // Longest Path (Dijkstra but longer)

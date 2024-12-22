@@ -38,8 +38,8 @@ int main()
         _INP printf("Please select a register to be shown from below:"
                     "\n1-) Display shortest path between two authors"
                     "\n2-) Display cooperations of an author in a queue"
-                    "\n3-) INCOMPLETE"
-                    "\n4-) INCOMPLETE"
+                    "\n3-) Display the binary search tree made from the queue in register 1"
+                    "\n4-) Display the second layer cooperations of an author and the shortest paths one would use to reach them"
                     "\n5-) Display all cooperations of an author"
                     "\n6-) Display the author with most cooperations"
                     "\n7-) Display longest path from an author"
@@ -53,7 +53,7 @@ int main()
                 scanf("%d",&register_parameter_1);
                 _INP printf("Enter author ID: ");
                 scanf("%d",&register_parameter_2);
-                Register1(main_graph, data_list, register_parameter_1, register_parameter_2);
+                Register1(main_graph, data_list, register_parameter_1, register_parameter_2, 0);
                 break;
             }
         case 2:
@@ -63,8 +63,18 @@ int main()
                 Register2(main_graph, data_list, register_parameter_1);
                 break;
             }
-        case 3: break;
-        case 4: break;
+        case 3:
+            {
+                Register3(main_graph, data_list);
+                break;
+            }
+        case 4:
+            {
+                _INP printf("Enter author ID: ");
+                scanf("%d",&register_parameter_1);
+                Register4(main_graph, data_list, register_parameter_1);
+                break;
+            }
         case 5:
             {
                 int coop_no = 0;

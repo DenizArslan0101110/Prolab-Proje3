@@ -46,4 +46,12 @@ struct Queue
     int capacity;
 };
 
+// I accidentally named this struct BSDNode instead of BSTNode and we are going to have to live with it (no I am not fixing it)
+struct BSDNode
+{
+    int value;
+    struct BSDNode *left;
+    struct BSDNode *right;
+};
+
 #endif // STRUCTS_H_INCLUDED

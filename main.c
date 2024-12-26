@@ -1,71 +1,33 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <xlsxio_read.h>
-#include <stdint.h>
-#include <basetsd.h>
-#include <ctype.h>
-#include <unistd.h>
-
-#define PAPER_LIMIT 400
-#define LONG_STRING_LEN 8192
-#define MAX_PAPER_LEN 2048
-#define MAX_NAME_LEN 64
-#define ORCID_LEN 24
-#define DATABASE_SIZE 4096
-
-#define _INF write(1, "\x1b[0mINFO: ", 11);
-#define _ERR write(1, "\x1b[31mERROR: ", 13);
-#define _WRN write(1, "\x1b[33mWARNING: ", 15);
-#define _DBG write(1, "\x1b[36mDEBUG: ", 13);
-
-struct Paper
-{
-    char name[MAX_PAPER_LEN];
-};
-
-struct Author
-{
-    char name[MAX_NAME_LEN];
-    char orcid[ORCID_LEN];
-    struct Paper papers[PAPER_LIMIT];
-};
-
-// structure to represent a node in the adjacency list
-struct Node
-{
-    uint16_t node_id;
-    struct Node* next;
-};
-
-// structure to represent the graph
-struct Graph
-{
-    int numVertices;
-    struct Node** list_of_adjacency_lists;
-    int isDirected;
-};
+#include "Parse.h"
+#include "Graph.h"
+#include "Registers.h"
+#include "raylib.h"
+#include "rlgl.h"
+#include "raymath.h"
 
 
+#define SCREEN_HEIGHT 800
+#define SCREEN_WIDTH 1000
 
-void RouteInfoToNecessaryFunctions(struct Author* data_list, char* orcid, int mc_pos, char* mc_name, char* npc_names, char* paper, struct Graph* main_graph);
-uint16_t FindFirstEmptyPaperSlot(struct Paper* papers);
-uint32_t FindFirstEmptyAuthorSlot(struct Author* data_list);
-int GraphPreparation(struct Author* data_list, struct Author new_recruit, int big_boss_node_id, struct Graph* main_graph);
-int FindCountOfChar(char *value, char identifier);
-char* PickString(char* long_string, int target_index, char encaser, char separator, char use_safe_mode);
-int ExcelKatledici(struct Author* data_list, struct Graph* main_graph);
-int ExcelYaglayici();
-struct Node* createNode(int v);
-struct Graph* createGraph(int vertices, char isDirected);
-void Edge(struct Graph* graph, int src, int dest);
-void PrintGraph(struct Graph* graph);
-int CountUsedIndexes(struct Graph* graph);
-void FreeGraph(struct Graph* graph);
+int JustGiveRandomOnce = 1;
+
+void FindTheCoauthorNumber(struct Graph* main_graph, struct Author* data_list, struct Position* position,int number);
+void RandomPosition(struct Position* position,int numberOfAuthors,struct Author* data_list);
+void DrawCircles(struct Position* position,int numberOfAuthors,struct Graph* graph);
+void DrawButtons(struct Button* buttons,Camera2D camera);
+int GetInput(Font myFont);
+
 
 int main()
 {
-    struct Graph* test_graph = createGraph(DATABASE_SIZE, 0);
+
+
+
+
+    const int screen_height = 1000;
+    const int screen_width = 1600;
+
+    struct Graph* test_graph = CreateGraph(DATABASE_SIZE, 0);
     struct Author* test_data_list = (struct Author*)calloc(DATABASE_SIZE, sizeof(struct Author));
     memset(test_data_list,0,sizeof(*test_data_list));
     ExcelKatledici(test_data_list, test_graph);
@@ -75,337 +37,468 @@ int main()
     FreeGraph(test_graph);
     free(test_data_list);
 
-    struct Graph* main_graph = createGraph(actual_used, 0);
+    struct Graph* main_graph = CreateGraph(actual_used, 0);
     struct Author* data_list = (struct Author*)calloc(DATABASE_SIZE, sizeof(struct Author));
     memset(data_list,0,sizeof(*data_list));
     ExcelKatledici(data_list, main_graph);
-
-
+    AssignEdgesToEveryone(main_graph, data_list, actual_used);
 
     for(int i=0; i<DATABASE_SIZE ;i++)
     {
         _INF
+        printf("%d ",i);
         write(1, data_list[i].orcid, strlen(data_list[i].orcid));
         write(1, " , ", 3);
         write(1, data_list[i].name, strlen(data_list[i].name));
         write(1, "\n", 1);
     }
     PrintGraph(main_graph);
-}
+    int choice=0;
+    int register_parameter_1;
+    int register_parameter_2;
 
-// function to create a new node
-struct Node* createNode(int v)
-{
-    struct Node* newNode = malloc(sizeof(struct Node));
-    newNode->node_id = v;
-    newNode->next = NULL;
-    return newNode;
-}
+    struct Button* buttons = (struct Button*)malloc(sizeof(struct Button) * 7);/// 7 tane buton tut
+    struct Position* position = (struct Position*)malloc(sizeof(struct Position) * main_graph->vertice_number-6);
 
-// function to create a graph
-struct Graph* createGraph(int vertices, char isDirected)
-{
-    struct Graph* graph = malloc(sizeof(struct Graph));
-    graph->numVertices = vertices;
-    graph->isDirected = isDirected;
-// create an array of adjacency lists
-    graph->list_of_adjacency_lists = malloc(vertices * sizeof(struct Node*));
-// empties the adjacency lists
-    for (int i = 0; i < vertices; i++) graph->list_of_adjacency_lists[i] = NULL;
-    return graph;
-}
+    //////////////////////////////////////////////////////////////////////////////////
 
-// function to add an edge to the graph
-void Edge(struct Graph* graph, int src, int dest)
-{
-// add edge from src to dest
-    struct Node* newNode = createNode(dest);
-    newNode->next = graph->list_of_adjacency_lists[src];
-    graph->list_of_adjacency_lists[src] = newNode;
+    ///Screen
 
-// if the graph is undirected, add an edge from dest to src as well
-    if (!graph->isDirected)
-    {
-        newNode = createNode(src);
-        newNode->next = graph->list_of_adjacency_lists[dest];
-        graph->list_of_adjacency_lists[dest] = newNode;
+    FindTheCoauthorNumber(main_graph,data_list,position,main_graph->vertice_number-6);
+    RandomPosition(position,main_graph->vertice_number-6,data_list);
+
+    ///Get the author list
+    for(int i = 0 ; i < main_graph->vertice_number-6 ; i++){
+           position[i].author = data_list[i];
     }
-}
 
-// function to print the adjacency list representation of the graph
-void PrintGraph(struct Graph* graph)
-{
-    _INF printf("Adjacency List\n");
-    for (int v = 0; v < graph->numVertices; v++)
-    {
-        struct Node* temp = graph->list_of_adjacency_lists[v];
-        _INF printf("%d --->", v);
-        while (temp)
+    InitWindow(screen_width,screen_height,"Data Set");
+    Font myFont = LoadFont("Comic.ttf");
+    SetTargetFPS(60);
+
+    Camera2D camera = {0};
+    camera.target = (Vector2){0,0};
+    camera.rotation = 0.0f;
+    camera.offset = (Vector2){screen_width/2,screen_height/2};
+    camera.zoom = 1.0f;
+
+    bool DrawTextBox = false;
+
+    int clickedCircleIndex = -1;
+    int WhichCircle = -1;
+    int Scroll = 0;
+
+    while(!WindowShouldClose()){
+        int textInfo1[7];
+        int textInfo2[7];
+        int textInfo3[7];
+
+
+        Vector2 mousePosition = GetMousePosition();
+        mousePosition.x = (mousePosition.x / camera.zoom) + (camera.target.x - (camera.offset.x / camera.zoom));
+        mousePosition.y = (mousePosition.y / camera.zoom) + (camera.target.y - (camera.offset.y / camera.zoom));
+
+        if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
         {
-            printf(" %d ->", temp->node_id);
-            temp = temp->next;
+            Vector2 delta = GetMouseDelta();
+            delta = Vector2Scale(delta, -1.0f/camera.zoom);
+            camera.target = Vector2Add(camera.target, delta);
         }
-        printf(" NULL\n");
+
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            for (int i = 0; i < main_graph->vertice_number-6; i++) {
+                    Vector2 CirclePosition = (Vector2){position[i].pos_x,position[i].pos_y};
+
+                if (CheckCollisionPointCircle(mousePosition, CirclePosition, position[i].cf.radius)){
+                    clickedCircleIndex = i;
+                    WhichCircle = i;
+                    break;
+                }
+            }
+        }
+        else
+            clickedCircleIndex = -1;
+
+        if(clickedCircleIndex != -1){
+                position[clickedCircleIndex].pos_x = mousePosition.x;
+                position[clickedCircleIndex].pos_y = mousePosition.y;
+        }
+
+        DrawButtons(buttons,camera);
+        ///Fix the button position
+        for(int i = 0 ; i < 7 ; i++){
+            textInfo1[i] = buttons[i].pos_x + 40/camera.zoom;
+            textInfo2[i] = buttons[i].pos_y + 47/camera.zoom;
+            textInfo3[i] = 30/camera.zoom;
+        }
+
+        int TextWidht = 400/camera.zoom;
+        int TextHeight = 1200/camera.zoom;
+        int TextPos_x = (camera.target.x - (800/camera.zoom)) ;
+        int TextPos_y = (camera.target.y - (600/camera.zoom));
+
+        if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+            for(int i = 0 ; i < 7 ; i++){
+                Rectangle buttonPos = {buttons[i].pos_x,buttons[i].pos_y,buttons[i].widgt,buttons[i].height};
+                if(CheckCollisionPointRec(mousePosition, buttonPos)){
+                    switch(i+1)
+                    {
+                    case 1:
+                        {
+
+
+                            Register1(main_graph,data_list, GetInput(myFont), GetInput(myFont), 0,position);
+                        break;
+                        }
+
+                    case 2:
+                        {
+
+                            Register2(main_graph, data_list, GetInput(myFont),position);
+
+                        break;
+                        }
+
+                    case 3:
+                        {
+                            Register3(main_graph, data_list);
+                        break;
+                        }
+
+                    case 4:
+                        {
+                            Register4(main_graph, data_list, GetInput(myFont),position);
+                        break;
+                        }
+
+                    case 5:
+                        {
+                            int coop_no = 0;
+                            coop_no = Register5(main_graph, data_list, GetInput(myFont));
+                            _INF printf("Author has done a total of %d cooperations.\n",coop_no);
+                        break;
+                        }
+
+                    case 6:
+                        {
+                            int max_coops_id=0;
+                            max_coops_id = Register6(main_graph, data_list);
+                            _INF printf("The author with the most cooperations is \""); PrintNodeInfo(max_coops_id, data_list, 0); printf("\".\n");
+                        break;
+                        }
+                    case 7:
+                        {
+                            Register7(main_graph, data_list, GetInput(myFont),position);
+                        break;
+                        }
+
+                    }
+                    goto EXIT;
+                }
+                else{
+                    for(int i = 0 ; i < main_graph->vertice_number-6 ; i++){
+                        if(position[i].author.orcid[0] != '\0')
+                            position[i].cf.color = RED;
+                        else
+                            position[i].cf.color = BLUE;
+
+                        }
+                }
+            }
+        }
+        EXIT:
+
+        ///DRAW
+        BeginDrawing();
+        ClearBackground(BLACK);
+        BeginMode2D(camera);
+
+        if(!CheckCollisionPointRec(mousePosition,(Rectangle){TextPos_x,TextPos_y,TextWidht,TextHeight})){
+            camera.zoom += ((float)GetMouseWheelMove()*0.05f);
+        }
+
+        if(CheckCollisionPointRec(mousePosition,(Rectangle){TextPos_x,TextPos_y,TextWidht,TextHeight})){
+            Scroll += ((float)GetMouseWheelMove()*20.0f);
+        }
+        if(Scroll > 0 ) Scroll = 0;
+
+
+        if(camera.zoom > 3.0f ) camera.zoom = 3.0f;
+        else if (camera.zoom <= 0.01f) camera.zoom = 0.01f;
+
+        DrawCirclesButBetter(position,main_graph->vertice_number-6,main_graph,myFont);
+        ///Draw Buttons
+        for(int i = 0 ; i < 7 ; i++){
+            char button[8];
+            sprintf(button,"Buton %d",i + 1);
+            DrawRectangle(buttons[i].pos_x , buttons[i].pos_y , buttons[i].widgt, buttons[i].height,buttons[i].color);
+
+            ///DrawText(button,textInfo1[i],textInfo2[i],textInfo3[i],WHITE);
+
+            DrawTextEx(myFont,button,(Vector2){textInfo1[i],textInfo2[i]},textInfo3[i],2,WHITE);
+        }
+        ///If clicked position have a circle draw text box
+        if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)){
+            for (int i = 0; i < main_graph->vertice_number-6; i++) {
+                Vector2 CirclePosition = (Vector2){position[i].pos_x,position[i].pos_y};
+                if (CheckCollisionPointCircle(mousePosition, CirclePosition, position[i].cf.radius)){
+                    DrawTextBox = true;
+                    break;
+                }
+                else
+                    DrawTextBox = false;
+            }
+        }
+        ///Open The Text Box
+
+        if(DrawTextBox && position[WhichCircle].author.orcid[0] != '\0'){
+
+            DrawRectangle(TextPos_x,TextPos_y,TextWidht,TextHeight,GRAY);
+            int i = 0;
+
+            int x_pos = TextPos_x + 30 /camera.zoom;
+            int y_pos = TextPos_y + 120/camera.zoom;
+            int TextSize = 20/camera.zoom;
+            int spaceBetweenCharacters = 5/camera.zoom;
+            int y_space = 0 /camera.zoom;
+
+            int paperNumber = 0;
+
+            for(int i = 0 ; i < PAPER_LIMIT ; i++){if(position[WhichCircle].author.papers[i].name[0] != 0) paperNumber++;}
+            ///HER MAKALEYI GEZ
+            Vector2 stats = (Vector2){TextPos_x + spaceBetweenCharacters + 40/camera.zoom - 20/camera.zoom,TextPos_y + 110/camera.zoom + y_space};
+            for(int i = 0 ; i < paperNumber ; i++){
+                ///Yazar ismi ve idsini yazdir
+                if(i == 0){
+
+                    DrawTextEx(myFont,position[WhichCircle].author.name,stats,30/camera.zoom,1,WHITE);
+                    stats.y += 40/camera.zoom;
+                    DrawTextEx(myFont,position[WhichCircle].author.orcid,stats,30/camera.zoom,1,WHITE);
+                    stats.y += 40/camera.zoom;
+
+                    char ID[16];
+                    sprintf(ID, "%d", WhichCircle);
+                    DrawTextEx(myFont,ID,stats,30/camera.zoom,1,WHITE);
+                }
+
+                ///HARF HARF TARA
+                int j = 0;
+                int Text_Xpos = TextPos_x + spaceBetweenCharacters + 40/camera.zoom - 20/camera.zoom;
+                int Text_Ypos = TextPos_y + 232/camera.zoom + y_space;
+                int Text_zoom = 30/camera.zoom;
+
+                ///DrawText(".",Text_Xpos,Text_Ypos,Text_zoom,WHITE);
+                if( TextPos_y + 240/camera.zoom + y_space + Scroll - 35/camera.zoom> stats.y )
+                    DrawTextEx(myFont,".",(Vector2){Text_Xpos,Text_Ypos + Scroll},Text_zoom,2,WHITE);
+                ///Karakterleri teker teker yazdir.
+                while(position[WhichCircle].author.papers[i].name[j] != '\0'){
+                    char myChar[2];
+
+                    myChar[0] = position[WhichCircle].author.papers[i].name[j];
+                    myChar[1] = '\0';
+
+                    if(spaceBetweenCharacters*camera.zoom < 350){
+                        ///DrawText(myChar,TextPos_x + spaceBetweenCharacters + 40/camera.zoom,TextPos_y + 150/camera.zoom + y_space,10/camera.zoom,WHITE);
+                        Vector2 MyVector = (Vector2){TextPos_x + spaceBetweenCharacters + 40/camera.zoom,TextPos_y + 240/camera.zoom + y_space + Scroll};
+                        if( TextPos_y + 240/camera.zoom + y_space + Scroll - 35/camera.zoom > stats.y ){
+                            DrawTextEx(myFont,myChar,MyVector,22/camera.zoom,2,WHITE);
+                        }
+
+                    }
+                    else{
+                        spaceBetweenCharacters = 5/camera.zoom;
+                        y_space += 30/camera.zoom;
+                    }
+                    spaceBetweenCharacters += 10/camera.zoom;
+                    j++;
+                }
+                spaceBetweenCharacters = 5/camera.zoom;
+                y_pos = y_space += 30/camera.zoom;
+
+            }
+            i++;
+        }
+        EndMode2D();
+        EndDrawing();
     }
+    UnloadFont(myFont);
+    CloseWindow();
+}
+void RandomPosition(struct Position* position,int numberOfAuthors,struct Author* data_list){
+    ///Coauthorlara göre özellik atamasi yap.
+    for(int i  = 0 ; i < numberOfAuthors ; i ++){
+
+        if(position[i].cf.NumberOfCoauthors == 0){
+            position[i].cf.color = WHITE;
+            position[i].cf.radius = 20;
+        }
+        else if(position[i].cf.NumberOfCoauthors < 40){
+            position[i].cf.color = BLUE;
+            position[i].cf.radius = 50;
+        }
+        else if(position[i].cf.NumberOfCoauthors >= 40){
+            position[i].cf.color = RED;
+            position[i].cf.radius = 100;
+        }
+    }
+
+
+    for(int i = 0 ; i < numberOfAuthors ; i++){
+        if(position[i].cf.radius == 100){
+            ///4000
+            ///3200
+            position[i].pos_x = -(SCREEN_WIDTH*2) + rand()%(SCREEN_WIDTH*4);
+            position[i].pos_y = (SCREEN_HEIGHT*2) - rand()%(SCREEN_HEIGHT*4);
+            position[i].author = data_list[i];
+        }
+        else if(position[i].cf.radius == 50){
+
+                ///1000 ve 800
+
+                position[i].pos_x = -(SCREEN_WIDTH*8) + rand()%(SCREEN_WIDTH*16);
+                position[i].pos_y = (SCREEN_HEIGHT*8) - rand()%(SCREEN_HEIGHT*16);
+                position[i].author = data_list[i];
+
+        }
+        else if(position[i].cf.radius == 20){
+            position[i].pos_x = 10000 + rand()%(SCREEN_WIDTH);
+            position[i].pos_y = (SCREEN_HEIGHT) - rand()%(SCREEN_HEIGHT*2);
+            position[i].author = data_list[i];
+        }
+    }
+
+
 }
 
-// Function to count the number of used indices in the adjacency list
-int CountUsedIndexes(struct Graph* graph)
-{
-    int count = 0;
-// Iterate over all vertices
-    for (int i = 0; i < graph->numVertices; i++)
-    {
-// Check if the adjacency list for vertex i is non-empty
-        if (graph->list_of_adjacency_lists[i] != NULL)count++;
-    }
-    return count;
-}
 
-void FreeGraph(struct Graph* graph)
+void FindTheCoauthorNumber(struct Graph* main_graph, struct Author* data_list, struct Position* position,int number)
 {
-// Free each adjacency list (list of nodes) in the graph
-    for (int i = 0; i < graph->numVertices; i++)
-    {
-        struct Node* current = graph->list_of_adjacency_lists[i];
-// Free each node in the adjacency list
+    for(int i  = 0 ; i < number ; i ++){
+
+        struct Node* current = main_graph->list_of_adjacency_lists[i];
+        int coauthor_no = 0;
+
+        while (current != NULL)  // Traverse the adjacency list
+        {
+            coauthor_no++;  // Count the number of coauthors
+            current = current->next;  // Move to the next node
+        }
+        position[i].cf.NumberOfCoauthors = coauthor_no;
+    }
+}
+void DrawCirclesButBetter(struct Position* position,int numberOfAuthors,struct Graph* graph,Font MyFont)
+{
+
+    int flag = 1;
+    int xStartPosition = 0;
+    int yStartPosition = 0;
+    for(int i = 0 ;i < numberOfAuthors ; i++ )
+        position[i].IsDrawed = false;
+
+    for(int i = 0 ; i < numberOfAuthors ; i++){
+        if(position[i].author.orcid[0] != '\0'){
+            ///Get the node
+            struct Node* current = graph->list_of_adjacency_lists[i];
+            if(JustGiveRandomOnce){
+                if(position[i].IsDrawed != true){
+                    position[i].pos_x = xStartPosition;
+                    position[i].pos_y = yStartPosition;
+                    position[i].cf.radius = 100;
+                    position[i].cf.color = RED;
+                }
+            }
+
         while (current != NULL)
         {
-            struct Node* temp = current;
-            current = current->next;
-            free(temp);
-        }
-    }
-// Free the array of adjacency lists
-    free(graph->list_of_adjacency_lists);
-// Free the graph itself
-    free(graph);
-}
 
-int ExcelKatledici(struct Author* data_list, struct Graph* main_graph)
-{
-// opens the file
-    xlsxioreader excelci;
-    if ((excelci = xlsxioread_open("PROLAB 3 - DATASET.xlsx")) == NULL)
-    {
-        _ERR fprintf(stderr, "File could not be opened!\n");
-        return 1;
-    }
-    else
-    {
-        _INF printf("File was successfully opened!\n");
-    }
-// lists available sheets (we only have 1)
-    xlsxioreadersheetlist sheetlist;
-    const char* sheetname;
-    _INF printf("Available sheets:\n");
-    if ((sheetlist = xlsxioread_sheetlist_open(excelci)) != NULL)
-    {
-        while ((sheetname = xlsxioread_sheetlist_next(sheetlist)) != NULL)
-        {
-            _INF printf(" - %s\n", sheetname);
-        }
-        xlsxioread_sheetlist_close(sheetlist);
-    }
-//read values from first sheet
-    int row_no = 0; char cell_no = 0;
-    char *orcid = malloc(ORCID_LEN); memset(orcid, 0, ORCID_LEN);
-    char *author_name = malloc(MAX_NAME_LEN); memset(author_name, 0, MAX_NAME_LEN);
-    char author_pos = 0;
-    char *npc_list = malloc(LONG_STRING_LEN); memset(npc_list, 0, LONG_STRING_LEN);
-    char *paper = malloc(LONG_STRING_LEN); memset(npc_list, 0, LONG_STRING_LEN);
-    char *value;
-    //_INF printf("Contents of first sheet:\n");
-    xlsxioreadersheet sheet = xlsxioread_sheet_open(excelci, NULL, XLSXIOREAD_SKIP_EMPTY_ROWS);
-    xlsxioread_sheet_next_row(sheet);
-    while (xlsxioread_sheet_next_row(sheet))
-    {
-        if(row_no%100==0) //77860
-        {
-            {_INF write(1,"At row no: ",11); printf("%d",row_no); write(1,"\n",1);}
-        }
-        while ((value = xlsxioread_sheet_next_cell(sheet)) != NULL)
-        {
-            cell_no++;
-            switch(cell_no)
-            {
-                case 1: strcpy(orcid,value); break;
-                case 2: continue;
-                case 3: author_pos = atoi(value); break;
-                case 4: strcpy(author_name,value); break;
-                case 5:
-                    {
-                        if(strlen(value)>=LONG_STRING_LEN){_WRN write(1, "Overflow warning: author list too long for LONG_STRING_LEN, consider increasing the limit.\n", 91);}
-                        else{strcpy(npc_list,value); break;}
-                    }
-                case 6:
-                    {
-                        if(strlen(value)>=MAX_PAPER_LEN){_WRN write(1, "Overflow warning: paper name too long for MAX_PAPER_LEN, consider increasing the limit.\n", 90);}
-                        else{strcpy(paper,value); break;}
-                    }
-                default: continue;
+            if(position[current->node_id].IsDrawed != true){
+                if(JustGiveRandomOnce == 1){
+                    position[current->node_id].cf.color = BLUE;
+                    position[current->node_id].cf.radius = 20;
+                    position[current->node_id].pos_x = (position[i].pos_x - 2700) + rand()%(5400);
+                    position[current->node_id].pos_y = (position[i].pos_y - 2700) + rand()%(5400);
+                    position[current->node_id].IsDrawed = true;
+                }
             }
-            free(value);
+
+            DrawLine(position[i].pos_x,position[i].pos_y,position[current->node_id].pos_x,position[current->node_id].pos_y,PURPLE);
+            DrawCircle(position[current->node_id].pos_x,position[current->node_id].pos_y,position[current->node_id].cf.radius, position[current->node_id].cf.color);
+            DrawText(position[current->node_id].author.name,position[current->node_id].pos_x + position[current->node_id].cf.radius,
+            position[current->node_id].pos_y + position[current->node_id].cf.radius,20,YELLOW);
+
+            current = current->next;
         }
-        RouteInfoToNecessaryFunctions(data_list, orcid, author_pos, author_name, npc_list, paper, main_graph);
-// here it is here you know what to put here put it here please do it
-        cell_no=0;
-        row_no++;
+        ///AUTHOR
+        DrawCircle(position[i].pos_x,position[i].pos_y,position[i].cf.radius,position[i].cf.color);
+        DrawTextEx(MyFont,position[i].author.name,(Vector2){position[i].pos_x + position[i].cf.radius,position[i].pos_y + position[i].cf.radius},
+                   20,2,YELLOW);
+
+
+
+        xStartPosition += 5000;
+        flag++;
+            if(flag == 11){
+                xStartPosition = 0;
+                yStartPosition += 5000;
+                flag = 1;
+            }
+        }
     }
-    xlsxioread_sheet_close(sheet);
-//clean up
-    xlsxioread_close(excelci);
-    _INF printf("Finished scanning xlsx file.\n");
-    return author_pos;
+    JustGiveRandomOnce = 0;
 }
+void DrawButtons(struct Button* buttons,Camera2D camera){
+
+    //DrawRectangle(camera.target.x + (SCREEN_WIDTH / 2.0f),(camera.target.y - (SCREEN_HEIGHT / 2.0f)),240,SCREEN_HEIGHT,WHITE);
 
 
+    for(int i = 0 ; i < 7 ; i++){
 
-// FindCountOfChar()
-// PickString() and RouteInfoToNecessaryFunctions() several times
-// RouteInfoToNecessaryFunctions auto calls GraphPreparation which auto calls FindFirstEmptyAuthorSlot and FindFirstEmptyPaperSlot so it works
-//void Penetrate(struct Author* data_list, char* orcid, char* author_name, char author_pos, char* npc_list, char* paper)
-//{
-//    RouteInfoToNecessaryFunctions(data_list, orcid, )
-//}
+        buttons[i].color = GRAY;
+        buttons[i].height = 120;
+        buttons[i].widgt = 200;
 
 
-// tells you how many times a given char has appeared in the string
-int FindCountOfChar(char *value, char identifier)
-{
-    int identifier_count = 0;
-    for(int i=0; i<strlen(value) ;i++)
-    {
-        if(value[i]==identifier) identifier_count++;
+        buttons[i].pos_x =  (camera.target.x + (SCREEN_WIDTH / 2.0f - buttons[i].widgt + 80) / camera.zoom) + 200/camera.zoom;
+        buttons[i].pos_y = (camera.target.y - (SCREEN_HEIGHT / 2.0f -  20) / camera.zoom) + (140*i)/camera.zoom - 100/camera.zoom;
+
+        buttons[i].widgt = buttons[i].widgt / camera.zoom;
+        buttons[i].height = buttons[i].height / camera.zoom;
+
     }
-    ///_DBG printf("FindCountOfChar has returned: %d",identifier_count+1);
-    return (identifier_count+1);
 }
+int GetInput(Font myFont){
 
-// PickStrings the names out of long string, can be customized to take escape character into account
-char* PickString(char* long_string, int target_index, char encaser, char separator, char use_safe_mode)
-{
-    char* short_string = malloc(MAX_NAME_LEN);
-    memset(short_string,0,MAX_NAME_LEN);
-// go until end of the string (we will likely break out of this loop)
-    int i=0, start=0, end=0;
-    for(int index=0; index<target_index ;index++)
-    {
-        while(long_string[i]!=separator && long_string[i]!=0)i++;
-        i++;
-    }
-// below is to give warning if lick function takes bad input, theres many of it
-    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
+    char register_parameter_1[50] = "\0";
+    int letterCount = 0;
+    while(!WindowShouldClose()){
+        BeginDrawing();
+        int key = GetCharPressed();
 
-    while(long_string[i]!=encaser && long_string[i]!=0)i++;
-    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
-    ///_DBG printf("PickString i: %d\n",i);
-    start=i;
-    i++;
-    SAFE:
-    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
-    while(long_string[i]!=encaser && long_string[i]!=0)i++;
-    ///_DBG printf("PickString i-1: %c\n",long_string[i]);
-    if(use_safe_mode==1 && !(long_string[i+1]==',' || long_string[i+1]==']')){i++;goto SAFE;}
-    if(long_string[i]==0){_ERR printf("Overlick error! PickString function likely went out of bounds!\n");return NULL;}
-    ///_DBG printf("PickString i: %d\n",i);
-    end=i;
-    for(int s=start+1, j=0; s<end ;s++, j++)
-    {
-        short_string[j]=long_string[s];
-    }
-    ///_DBG printf("PickString has returned \"%s\"\n",short_string);
-    return short_string;
-}
+        if (key > 0) {
+            if ((key >= 32) && (key <= 125) && (letterCount < 49)) {
+                register_parameter_1[letterCount] = (char)key;
+                register_parameter_1[letterCount + 1] = '\0';
+                letterCount++;
+            }
+            key = GetCharPressed();
+        }
 
-// you give information, it prepares it and sends it to the big function (ravish) which then lists it
-void RouteInfoToNecessaryFunctions(struct Author* data_list, char* orcid, int mc_pos, char* mc_name, char* npc_names, char* paper, struct Graph* main_graph)
-{
-    struct Author carrier;
-    strcpy(carrier.orcid, orcid);
-    strcpy(carrier.name, mc_name);
-    strcpy(carrier.papers[0].name, paper);
-    ///_DBG printf("Sending to ravish: name:\"%s\" orcid:\"%s\" paper:\"%s\" \n", carrier.name, carrier.orcid, carrier.papers[0].name);
-    int big_boss_node_id = GraphPreparation(data_list, carrier, -1, main_graph);
-    memset(carrier.orcid, 0, sizeof(carrier.orcid));
-    int npc_count = FindCountOfChar(npc_names, ',');
-    for(int i=0; i<npc_count ;i++)
-    {
-        if(i==mc_pos-1) continue;
-        strcpy(carrier.name, PickString(npc_names, i, '\'', ',', 1));
-        ///_DBG printf("Sending to ravish: name:\"%s\" orcid:\"%s\" paper:\"%s\" \n", carrier.name, carrier.orcid, carrier.papers[0].name);
-        GraphPreparation(data_list, carrier, big_boss_node_id, main_graph);
-    }
-    return;
-};
-
-int GraphPreparation(struct Author* data_list, struct Author new_recruit, int big_boss_node_id, struct Graph* main_graph)
-{
-    ///_DBG write(1, "Before FindFirstEmptyAuthorSlot.\n", 15);
-    int first_empty_index = FindFirstEmptyAuthorSlot(data_list);
-    ///_DBG write(1, "Past FindFirstEmptyAuthorSlot.\n", 13);
-    int i=0;
-    for(i=0; i<first_empty_index ;i++)
-    {
-        if(strcmp(new_recruit.name, data_list[i].name)==0) goto FOUNDHIM;
-    }
-    ///_DBG write(1, "Past for loop.\n", 15);
-    strcpy(data_list[first_empty_index].name, new_recruit.name);
-    strcpy(data_list[first_empty_index].papers[FindFirstEmptyPaperSlot(data_list[first_empty_index].papers)].name, new_recruit.orcid);
-    ///_DBG write(1, "Past copying.\n", 14);
-    if(new_recruit.orcid[0]!='0')
-    {
-        Edge(main_graph, big_boss_node_id, first_empty_index);
-        return -1;
-    }
-    else
-    {
-        strcpy(data_list[first_empty_index].orcid, new_recruit.orcid);
-        return first_empty_index;
-    }
-    return -1;
-    FOUNDHIM:
-    strcpy(data_list[i].papers[FindFirstEmptyPaperSlot(data_list[i].papers)].name, new_recruit.orcid);
-    if(big_boss_node_id == -1) return i;
-    return -1;
-}
-
-// finds and returns the index of first empty name space on array
-uint32_t FindFirstEmptyAuthorSlot(struct Author* data_list)
-{
-    for(uint32_t i=0; i<DATABASE_SIZE ;i++)
-    {
-        ///_DBG printf("%d\n",i);
-        if(data_list[i].name[0] == 0)
+        if (IsKeyPressed(KEY_BACKSPACE) && (letterCount > 0)) {
+            letterCount--;
+            register_parameter_1[letterCount] = '\0';
+        }
+        if(IsKeyPressed(KEY_ENTER))
         {
-            ///_DBG printf("FindFirstEmptyAuthorSlot has returned %d.\n",i);
-            return i;
+            break;
         }
-    }
-    _ERR write(1, "Overflow error: Main storage array has ran out of space, code will not work!\n", 77);
-    return -1;
-}
 
-// same as caress except it does so on papers list
-uint16_t FindFirstEmptyPaperSlot(struct Paper* papers)
-{
-    for(uint16_t i=0; i<PAPER_LIMIT ;i++)
-    {
-        if(papers[i].name[0] == 0)
-        {
-            ///_DBG printf("FindFirstEmptyPaperSlot has returned %d.\n",i);
-            return i;
+        DrawRectangle(SCREEN_WIDTH/2,SCREEN_HEIGHT/2 - 100,600,300,GRAY);
+        DrawTextEx(myFont,"Enter author ID: ",(Vector2){SCREEN_WIDTH/2 + 50,SCREEN_HEIGHT/2 - 60},40
+                   ,1,WHITE);
+        DrawRectangle(SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2,500,100,BLACK);
+        DrawTextEx(myFont,register_parameter_1,(Vector2){SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2},60,1,WHITE);
+        EndDrawing();
         }
-    }
-    _WRN write(1, "Overwrite warning: Paper limit was exceeded, last index will be overwritten.\n", 77);
-    return PAPER_LIMIT-1;
+        while(!IsKeyReleased(KEY_ENTER)){BeginDrawing();EndDrawing();}
+        return atoi(register_parameter_1);
 }
-
-
-
-
-
-
-
-
-

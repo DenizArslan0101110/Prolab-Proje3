@@ -1,7 +1,8 @@
 #ifndef REGISTERS_H_INCLUDED
 #define REGISTERS_H_INCLUDED
 
-
+#include "rlgl.h"
+#include "raymath.h"
 #include "Parse.h"
 #include <stdio.h>
 
@@ -13,5 +14,7 @@ void Register4(struct Graph* main_graph, struct Author* data_list, int index,str
 int Register5(struct Graph* main_graph, struct Author* data_list, int index);
 int Register6(struct Graph* main_graph, struct Author* data_list);
 int Register7(struct Graph* main_graph, struct Author* data_list, int start,struct Position* position);
+int GetInput(Font myFont);
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont);
 
 #endif // REGISTERS_H_INCLUDED

@@ -13,9 +13,9 @@ int JustGiveRandomOnce = 1;
 
 void FindTheCoauthorNumber(struct Graph* main_graph, struct Author* data_list, struct Position* position,int number);
 void RandomPosition(struct Position* position,int numberOfAuthors,struct Author* data_list);
-void DrawCircles(struct Position* position,int numberOfAuthors,struct Graph* graph);
+void DrawCirclesButBetter(struct Position* position,int numberOfAuthors,struct Graph* graph,Font MyFont);
 void DrawButtons(struct Button* buttons,Camera2D camera);
-int GetInput(Font myFont);
+
 
 
 int main()

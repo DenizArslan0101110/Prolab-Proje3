@@ -15,6 +15,6 @@ int Register5(struct Graph* main_graph, struct Author* data_list, int index);
 int Register6(struct Graph* main_graph, struct Author* data_list);
 int Register7(struct Graph* main_graph, struct Author* data_list, int start,struct Position* position);
 int GetInput(Font myFont);
-void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont);
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont,int Xtimes);
 
 #endif // REGISTERS_H_INCLUDED

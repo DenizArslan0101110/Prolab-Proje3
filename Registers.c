@@ -9,8 +9,9 @@
 struct Queue* queue = NULL;
 int x_pos = 700;
 int y_pos = 300;
+int depthLeft = 0;
 
-void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont);
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont,int Xtimes);
 
 int Register1(struct Graph* main_graph, struct Author* data_list, int start, int finish, int is_simple,struct Position* position)
 {
@@ -200,6 +201,7 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
     camera.rotation = 0.0f;
     camera.offset = (Vector2){1000/2,800/2};
     camera.zoom = 1.0f;
+
     while(!WindowShouldClose())
     {
             Vector2 mousePosition = GetMousePosition();
@@ -225,7 +227,8 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
             ClearBackground(BLACK);
             DrawTextEx(myFont,"T'ye basarak cikartma islemi yapabilirsiniz !",(Vector2){camera.target.x-480,camera.target.y-400},40,1,WHITE);
             DrawCircle(700,150,20,GREEN);
-            DrawBSTInOrder(binary_search_tree,-1,700,150,data_list,myFont);
+            depthLeft = 0;
+            DrawBSTInOrder(binary_search_tree,-1,700,150,data_list,myFont,1);
 
             EndMode2D();
             EndDrawing();
@@ -341,41 +344,48 @@ int Register7(struct Graph* main_graph, struct Author* data_list, int start,stru
     return 1;
 }
 
-void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont)
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previousX,int previousY,struct Author* data_list,Font myFont,int Xtimes)
 {
-    int x = previusX;
-    int y = previusY;
+    int x = previousX;
+    int y = previousY;
+
     char text[100];
     char text2[100];
     if (root != NULL)
     {
 
         if(LeftOrRight == 0){
-            previusX -= 400;
-            previusY += 200;
-        }
-        if(LeftOrRight == 1 ){
-            previusX += 400;
-            previusY += 200;
+           // if(depthLeft == 1) previousX -= 600;
+            previousX -= 600/Xtimes*2 - 30 * Xtimes;
+            previousY += 200;
         }
 
-        DrawBSTInOrder(root->left,0,previusX,previusY,data_list,myFont);
+        if(LeftOrRight == 1){
+
+            previousX += 600/Xtimes*2 + 30 * Xtimes;
+            previousY += 200;
+        }
+        depthLeft++;
+        DrawBSTInOrder(root->left,0,previousX,previousY,data_list,myFont,2*Xtimes);
+
         if(LeftOrRight != -1)
         {
-            DrawCircle(previusX,previusY,20,GREEN);
-            DrawLine(previusX,previusY,x,y,PURPLE);
-            sprintf(text,"%s    %d",data_list[root->value].name,root->value);
-            DrawTextEx(myFont,text,(Vector2){previusX+20,previusY+20},20,1,WHITE);
+            DrawCircle(previousX,previousY,20,GREEN);
+            DrawLine(previousX,previousY,x,y,PURPLE);
+            sprintf(text,"%d",root->value);
+            DrawTextEx(myFont,text,(Vector2){previousX+20,previousY+20},20,1,WHITE);
         }
 
 
-        DrawBSTInOrder(root->right,1,previusX,previusY,data_list,myFont);
+        DrawBSTInOrder(root->right,1,previousX,previousY,data_list,myFont,2*Xtimes);
+
         if(LeftOrRight != -1)
         {
-            DrawCircle(previusX,previusY,20,GREEN);
-            sprintf(text2,"%s    %d",data_list[root->value].name,root->value);
-            DrawTextEx(myFont,text2,(Vector2){previusX+20,previusY+20},20,1,WHITE);
+            DrawCircle(previousX,previousY,20,GREEN);
+            sprintf(text2,"%d",root->value);
+            DrawTextEx(myFont,text2,(Vector2){previousX+20,previousY+20},20,1,WHITE);
         }
+        depthLeft--;
     }
 }
 int GetInput(Font myFont){

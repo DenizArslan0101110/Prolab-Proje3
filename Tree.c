@@ -70,3 +70,50 @@ void PrintInOrder(struct BSDNode* root)
         PrintInOrder(root->right);
     }
 }
+
+// Function to perform inorder traversal and store the values in an array
+void InOrderTraversal(struct BSDNode* root, int* arr, int* index)
+{
+    if (root == NULL)
+    {
+        return;
+    }
+
+    InOrderTraversal(root->left, arr, index);
+    arr[(*index)++] = root->value;  // Store the value in the array
+    InOrderTraversal(root->right, arr, index);
+}
+
+// Function to build a balanced BST from a sorted array
+struct BSDNode* BuildBalancedBSD(int* arr, int start, int end)
+{
+    if (start > end)
+    {
+        return NULL;
+    }
+
+    int mid = (start + end) / 2;
+    struct BSDNode* node = CreateBSDNode(arr[mid]);
+
+    node->left = BuildBalancedBSD(arr, start, mid - 1);
+    node->right = BuildBalancedBSD(arr, mid + 1, end);
+
+    return node;
+}
+
+// Function to balance the BST
+struct BSDNode* BalanceBSD(struct BSDNode* root)
+{
+    // Step 1: Perform inorder traversal to store the values in an array
+    int* arr = (int*)malloc(100 * sizeof(int));  // Allocate a large enough array
+    int index = 0;
+    InOrderTraversal(root, arr, &index);
+
+    // Step 2: Build a balanced BST from the sorted array
+    struct BSDNode* balanced_root = BuildBalancedBSD(arr, 0, index - 1);
+
+    // Free the array used for storing the values
+    free(arr);
+
+    return balanced_root;
+}

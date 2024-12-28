@@ -181,8 +181,10 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
 
         Insert(binary_search_tree, list[i]);
     }
-    /*
-    _INF printf("Binary Search tree of the queue: \n");
+
+    binary_search_tree = BalanceBSD(binary_search_tree);
+
+    /*_INF printf("Binary Search tree of the queue: \n");
     PrintInOrder(binary_search_tree);
     _INP printf("Which index would you like to delete off of the binary search tree?\n");
     int input = -1;

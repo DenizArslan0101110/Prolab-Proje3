@@ -14,6 +14,9 @@ struct BSDNode* Insert(struct BSDNode* root, int value);
 struct BSDNode* FindMin(struct BSDNode* root);
 struct BSDNode* Remove(struct BSDNode* root, int value);
 void PrintInOrder(struct BSDNode* root);
+void InOrderTraversal(struct BSDNode* root, int* arr, int* index);
+struct BSDNode* BuildBalancedBSD(int* arr, int start, int end);
+struct BSDNode* BalanceBSD(struct BSDNode* root);
 
 
 #endif // TREE_H_INCLUDED

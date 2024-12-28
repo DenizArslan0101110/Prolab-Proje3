@@ -1,6 +1,7 @@
 #include "Tree.h"
 
 // Function to create a new BSDNode
+
 struct BSDNode* CreateBSDNode(int value)
 {
     struct BSDNode* new_node = (struct BSDNode*)malloc(sizeof(struct BSDNode));
@@ -63,7 +64,9 @@ void PrintInOrder(struct BSDNode* root)
     if (root != NULL)
     {
         PrintInOrder(root->left);
+
         printf("%d ", root->value);
+
         PrintInOrder(root->right);
     }
 }

@@ -175,7 +175,20 @@ int main()
                         {
                             int coop_no = 0;
                             coop_no = Register5(main_graph, data_list, GetInput(myFont));
-                            _INF printf("Author has done a total of %d cooperations.\n",coop_no);
+                            char text[100];
+                            sprintf(text,"Author has done a total of %d cooperations.\n",coop_no);
+                            while(!WindowShouldClose()){
+                                Font myFont = LoadFont("Comic.ttf");
+                                BeginDrawing();
+                                if(IsKeyPressed(KEY_ENTER))
+                                {
+                                    break;
+                                }
+                                DrawRectangle(1000/2,800/2 - 100,750,300,GRAY);
+                                DrawTextEx(myFont,text,(Vector2){1000/2 + 50,+800/2,500},40,1,WHITE);
+                                EndDrawing();
+                                }
+                                while(!IsKeyReleased(KEY_ENTER)){BeginDrawing();EndDrawing();}
                         break;
                         }
 
@@ -465,40 +478,4 @@ void DrawButtons(struct Button* buttons,Camera2D camera){
         buttons[i].height = buttons[i].height / camera.zoom;
 
     }
-}
-int GetInput(Font myFont){
-
-    char register_parameter_1[50] = "\0";
-    int letterCount = 0;
-    while(!WindowShouldClose()){
-        BeginDrawing();
-        int key = GetCharPressed();
-
-        if (key > 0) {
-            if ((key >= 32) && (key <= 125) && (letterCount < 49)) {
-                register_parameter_1[letterCount] = (char)key;
-                register_parameter_1[letterCount + 1] = '\0';
-                letterCount++;
-            }
-            key = GetCharPressed();
-        }
-
-        if (IsKeyPressed(KEY_BACKSPACE) && (letterCount > 0)) {
-            letterCount--;
-            register_parameter_1[letterCount] = '\0';
-        }
-        if(IsKeyPressed(KEY_ENTER))
-        {
-            break;
-        }
-
-        DrawRectangle(SCREEN_WIDTH/2,SCREEN_HEIGHT/2 - 100,600,300,GRAY);
-        DrawTextEx(myFont,"Enter author ID: ",(Vector2){SCREEN_WIDTH/2 + 50,SCREEN_HEIGHT/2 - 60},40
-                   ,1,WHITE);
-        DrawRectangle(SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2,500,100,BLACK);
-        DrawTextEx(myFont,register_parameter_1,(Vector2){SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2},60,1,WHITE);
-        EndDrawing();
-        }
-        while(!IsKeyReleased(KEY_ENTER)){BeginDrawing();EndDrawing();}
-        return atoi(register_parameter_1);
 }

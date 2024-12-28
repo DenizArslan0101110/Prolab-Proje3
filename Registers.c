@@ -2,8 +2,15 @@
 #include "Graph.h"
 #include "Registers.h"
 #include "Tree.h"
+#include "rlgl.h"
+#include "raymath.h"
+
 
 struct Queue* queue = NULL;
+int x_pos = 700;
+int y_pos = 300;
+
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont);
 
 int Register1(struct Graph* main_graph, struct Author* data_list, int start, int finish, int is_simple,struct Position* position)
 {
@@ -31,8 +38,32 @@ int Register1(struct Graph* main_graph, struct Author* data_list, int start, int
     if(prev[finish]==-1 && !is_simple) {_WRN printf("Shortest path between %d and %d could not be found, nodes are not connected.\n",start,finish);}
     if(prev[finish]!=-1)
     {
+            Font myFont = LoadFont("Comic.ttf");
+            char Text[200];
+            char Text2[200];
+            sprintf(Text,"Shortest path between %d and %d has a distance of %d, and is as follows: \n", start, finish, dist[finish]);
+            DrawTextEx(myFont,Text,(Vector2){x_pos,y_pos},30,1,WHITE);
+            int current = finish;
+            int xTimes = 0;
+            sprintf(Text2,"%d",finish);
+
+            DrawTextEx(myFont,Text2,(Vector2){x_pos+ 770,y_pos},30,1,WHITE);
+            while(prev[current]!=-1)
+            {
+
+                char text2[20];
+                current = prev[current];
+                sprintf(text2," ---> %d",prev[current]);
+
+                DrawTextEx(myFont,text2,(Vector2){x_pos + 800 + (78*xTimes),y_pos},30,1,WHITE);
+
+
+                xTimes++;
+            }
+
+            y_pos += 30;
+
         _INF printf("Shortest path between %d and %d has a distance of %d, and is as follows: \n", start, finish, dist[finish]);
-        int current = finish;
         printf("%d", finish);
         while(prev[current]!=-1)
         {
@@ -113,6 +144,7 @@ void Register2(struct Graph* main_graph, struct Author* data_list, int index,str
 
 void Register3(struct Graph* main_graph, struct Author* data_list)
 {
+
     if(queue == NULL){ _WRN printf("Queue does not exists, try Register 1 first.");}
     int list[512]; memset(list,-1,512*sizeof(int));
     int element = -1; int i=0;
@@ -121,7 +153,7 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
         list[i] = element;
         i++;
     }
-// code chunk below destroys any duplicates in the list and sorts them into order (This is the worst code I have ever written but it works)
+//  code chunk below destroys any duplicates in the list and sorts them into order (This is the worst code I have ever written but it works)
     for(int aaa=0; aaa<512 ;aaa++)
     {
         int spy = 0;
@@ -142,11 +174,14 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
     }
     i--;
     struct BSDNode* binary_search_tree = CreateBSDNode(list[i]); ///BUNA GORE ISLEM YAPILCAK
+
     i--;
     for(; i>0 ;i--)
     {
+
         Insert(binary_search_tree, list[i]);
     }
+    /*
     _INF printf("Binary Search tree of the queue: \n");
     PrintInOrder(binary_search_tree);
     _INP printf("Which index would you like to delete off of the binary search tree?\n");
@@ -155,10 +190,49 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
     Remove(binary_search_tree, input);
     _INF printf("Binary Search tree of the queue after deletion: \n");
     PrintInOrder(binary_search_tree);
+    */
+
+
+    Camera2D camera = {0};
+    camera.target = (Vector2){0,0};
+    camera.rotation = 0.0f;
+    camera.offset = (Vector2){1000/2,800/2};
+    camera.zoom = 1.0f;
+    while(!WindowShouldClose())
+    {
+            Vector2 mousePosition = GetMousePosition();
+            mousePosition.x = (mousePosition.x / camera.zoom) + (camera.target.x - (camera.offset.x / camera.zoom));
+            mousePosition.y = (mousePosition.y / camera.zoom) + (camera.target.y - (camera.offset.y / camera.zoom));
+
+            if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT))
+            {
+                Vector2 delta = GetMouseDelta();
+                delta = Vector2Scale(delta, -1.0f/camera.zoom);
+                camera.target = Vector2Add(camera.target, delta);
+            }
+            Font myFont = LoadFont("Comic.ttf");
+            if(IsKeyPressed(KEY_T)){
+                    while(!IsKeyReleased(KEY_T)){BeginDrawing();EndDrawing(); }
+                Remove(binary_search_tree,GetInput(myFont));
+            }
+
+
+            BeginDrawing();
+
+            BeginMode2D(camera);
+            ClearBackground(BLACK);
+            DrawTextEx(myFont,"T'ye basarak cikartma islemi yapabilirsiniz !",(Vector2){camera.target.x-480,camera.target.y-400},40,1,WHITE);
+            DrawCircle(700,150,20,GREEN);
+            DrawBSTInOrder(binary_search_tree,-1,700,150,data_list,myFont);
+
+            EndMode2D();
+            EndDrawing();
+    }
 }
 
 void Register4(struct Graph* main_graph, struct Author* data_list, int index,struct Position* position)
 {
+
     if(data_list[index].orcid[0]!=0)
     {
         _WRN printf("Given author has no connections of depth \"2\" and as such, cant be calculated.\n");
@@ -178,10 +252,23 @@ void Register4(struct Graph* main_graph, struct Author* data_list, int index,str
             }
         current = current->next;
     }
-    for(i=0; to_visit[i] != -1 ;i++)
-    {
-        Register1(main_graph, data_list, index, to_visit[i], 1,position);
+    int yPosChanger = 0.0f;
+
+
+    while(!WindowShouldClose()){
+        yPosChanger -= ((float)GetMouseWheelMove()*50);
+        x_pos = 340;
+        y_pos = 200 + yPosChanger;
+        BeginDrawing();
+        ClearBackground(BLACK);
+        for(i=0; to_visit[i] != -1 ;i++)
+        {
+            Register1(main_graph, data_list, index, to_visit[i], 1,position);
+            if(to_visit[i] != -1) i++;
+        }
+        EndDrawing();
     }
+
     FUCKTHISIMOUT:;
 }
 
@@ -200,6 +287,7 @@ int Register5(struct Graph* main_graph, struct Author* data_list, int index)
 int Register6(struct Graph* main_graph, struct Author* data_list)
 {
     int most = -1, coop_no_max = 0, temp=0;
+    char text[100];
     for(int i=0; i<main_graph->vertice_number ;i++)
     {
         temp = Register5(main_graph, data_list, i);
@@ -209,8 +297,20 @@ int Register6(struct Graph* main_graph, struct Author* data_list)
             most=i;
         }
     }
-    _DBG printf("with %d cooperations, author's id: %d\n",coop_no_max, most);
-    //_DBG PrintNodeInfo(most, data_list, 2);
+    sprintf(text,"with %d cooperations, author's id: %d\n",coop_no_max, most);
+    while(!WindowShouldClose()){
+        Font myFont = LoadFont("Comic.ttf");
+        BeginDrawing();
+        if(IsKeyPressed(KEY_ENTER))
+        {
+            break;
+        }
+        DrawRectangle(1000/2,800/2 - 100,600,300,GRAY);
+        DrawTextEx(myFont,text,(Vector2){1000/2 + 50,+800/2,500},40,1,WHITE);
+        EndDrawing();
+        }
+        while(!IsKeyReleased(KEY_ENTER)){BeginDrawing();EndDrawing();}
+    _DBG printf("With %d cooperations, author's id: %d\n",coop_no_max, most);
     return most;
 }
 
@@ -237,4 +337,79 @@ int Register7(struct Graph* main_graph, struct Author* data_list, int start,stru
     PrintLongestPath(dist, prev, main_graph->vertice_number, start);
     position[start].cf.color = YELLOW;
     return 1;
+}
+
+void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont)
+{
+    int x = previusX;
+    int y = previusY;
+    char text[100];
+    char text2[100];
+    if (root != NULL)
+    {
+
+        if(LeftOrRight == 0){
+            previusX -= 400;
+            previusY += 200;
+        }
+        if(LeftOrRight == 1 ){
+            previusX += 400;
+            previusY += 200;
+        }
+
+        DrawBSTInOrder(root->left,0,previusX,previusY,data_list,myFont);
+        if(LeftOrRight != -1)
+        {
+            DrawCircle(previusX,previusY,20,GREEN);
+            DrawLine(previusX,previusY,x,y,PURPLE);
+            sprintf(text,"%s    %d",data_list[root->value].name,root->value);
+            DrawTextEx(myFont,text,(Vector2){previusX+20,previusY+20},20,1,WHITE);
+        }
+
+
+        DrawBSTInOrder(root->right,1,previusX,previusY,data_list,myFont);
+        if(LeftOrRight != -1)
+        {
+            DrawCircle(previusX,previusY,20,GREEN);
+            sprintf(text2,"%s    %d",data_list[root->value].name,root->value);
+            DrawTextEx(myFont,text2,(Vector2){previusX+20,previusY+20},20,1,WHITE);
+        }
+    }
+}
+int GetInput(Font myFont){
+    int SCREEN_WIDTH = 1000;
+    int SCREEN_HEIGHT = 800;
+    char register_parameter_1[50] = "\0";
+    int letterCount = 0;
+    while(!WindowShouldClose()){
+        BeginDrawing();
+        int key = GetCharPressed();
+
+        if (key > 0) {
+            if ((key >= 32) && (key <= 125) && (letterCount < 49)) {
+                register_parameter_1[letterCount] = (char)key;
+                register_parameter_1[letterCount + 1] = '\0';
+                letterCount++;
+            }
+            key = GetCharPressed();
+        }
+
+        if (IsKeyPressed(KEY_BACKSPACE) && (letterCount > 0)) {
+            letterCount--;
+            register_parameter_1[letterCount] = '\0';
+        }
+        if(IsKeyPressed(KEY_ENTER))
+        {
+            break;
+        }
+
+        DrawRectangle(SCREEN_WIDTH/2,SCREEN_HEIGHT/2 - 100,600,300,GRAY);
+        DrawTextEx(myFont,"Enter author ID: ",(Vector2){SCREEN_WIDTH/2 + 50,SCREEN_HEIGHT/2 - 60},40
+                   ,1,WHITE);
+        DrawRectangle(SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2,500,100,BLACK);
+        DrawTextEx(myFont,register_parameter_1,(Vector2){SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2},60,1,WHITE);
+        EndDrawing();
+        }
+        while(!IsKeyReleased(KEY_ENTER)){BeginDrawing();EndDrawing();}
+        return atoi(register_parameter_1);
 }

@@ -11,8 +11,6 @@ int x_pos = 700;
 int y_pos = 300;
 int depthLeft = 0;
 
-void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previusX,int previusY,struct Author* data_list,Font myFont,int Xtimes);
-
 int Register1(struct Graph* main_graph, struct Author* data_list, int start, int finish, int is_simple,struct Position* position)
 {
     int* dist = (int*)malloc(main_graph->vertice_number * sizeof(int));
@@ -228,10 +226,12 @@ void Register3(struct Graph* main_graph, struct Author* data_list)
             DrawTextEx(myFont,"T'ye basarak cikartma islemi yapabilirsiniz !",(Vector2){camera.target.x-480,camera.target.y-400},40,1,WHITE);
             DrawCircle(700,150,20,GREEN);
             depthLeft = 0;
-            DrawBSTInOrder(binary_search_tree,-1,700,150,data_list,myFont,1);
+            DrawBSTInOrderV2(binary_search_tree,-1,700,150,&myFont,-1);
 
             EndMode2D();
             EndDrawing();
+
+            UnloadFont(myFont);
     }
 }
 
@@ -344,8 +344,10 @@ int Register7(struct Graph* main_graph, struct Author* data_list, int start,stru
     return 1;
 }
 
+/*
 void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previousX,int previousY,struct Author* data_list,Font myFont,int Xtimes)
 {
+    int depth_level = 10;
     int x = previousX;
     int y = previousY;
 
@@ -353,14 +355,15 @@ void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previousX,int previ
     char text2[100];
     if (root != NULL)
     {
-
-        if(LeftOrRight == 0){
+        if(LeftOrRight == 0)
+        {
            // if(depthLeft == 1) previousX -= 600;
             previousX -= 600/Xtimes*2 - 30 * Xtimes;
             previousY += 200;
         }
 
-        if(LeftOrRight == 1){
+        if(LeftOrRight == 1)
+        {
 
             previousX += 600/Xtimes*2 + 30 * Xtimes;
             previousY += 200;
@@ -388,6 +391,59 @@ void DrawBSTInOrder(struct BSDNode* root,int LeftOrRight,int previousX,int previ
         depthLeft--;
     }
 }
+*/
+
+void DrawBSTInOrderV2(struct BSDNode* root, short did_we_left, short previousX, short previousY, Font* myFont, short depth_level)
+{
+    if(depth_level==-1) depth_level = 10;
+    short x = previousX;
+    short y = previousY;
+    char text[MAX_NAME_LEN];
+    char text2[MAX_NAME_LEN];
+    if (root != NULL)
+    {
+        if(did_we_left == 0)
+        {
+            previousX -= (1000/(depth_level+previousY)*100);
+            previousY += 200;
+            ///_DBG printf("depth: %d prevY: %d\n",depth_level, previousY);
+            depth_level--;
+        }
+        if(did_we_left == 1)
+        {
+            previousX += (1000/(depth_level+previousY)*100);
+            previousY += 200;
+            ///_DBG printf("depth: %d prevY: %d\n",depth_level, previousY);
+            depth_level--;
+        }
+
+
+
+        //depthLeft++;
+        DrawBSTInOrderV2(root->left,0,previousX,previousY,myFont,depth_level);
+
+        if(did_we_left != -1)
+        {
+            DrawCircle(previousX,previousY,20,GREEN);
+            DrawLine(previousX,previousY,x,y,PURPLE);
+            sprintf(text,"%d",root->value);
+            DrawTextEx(*myFont,text,(Vector2){previousX+20,previousY+20},20,1,WHITE);
+        }
+
+
+        DrawBSTInOrderV2(root->right,1,previousX,previousY,myFont,depth_level);
+
+        if(did_we_left != -1)
+        {
+            DrawCircle(previousX,previousY,20,GREEN);
+            sprintf(text2,"%d",root->value);
+            DrawTextEx(*myFont,text2,(Vector2){previousX+20,previousY+20},20,1,WHITE);
+        }
+        //depthLeft--;
+    }
+}
+
+
 int GetInput(Font myFont){
     int SCREEN_WIDTH = 1000;
     int SCREEN_HEIGHT = 800;
@@ -416,8 +472,7 @@ int GetInput(Font myFont){
         }
 
         DrawRectangle(SCREEN_WIDTH/2,SCREEN_HEIGHT/2 - 100,600,300,GRAY);
-        DrawTextEx(myFont,"Enter author ID: ",(Vector2){SCREEN_WIDTH/2 + 50,SCREEN_HEIGHT/2 - 60},40
-                   ,1,WHITE);
+        DrawTextEx(myFont,"Enter author ID: ",(Vector2){SCREEN_WIDTH/2 + 50,SCREEN_HEIGHT/2 - 60},40,1,WHITE);
         DrawRectangle(SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2,500,100,BLACK);
         DrawTextEx(myFont,register_parameter_1,(Vector2){SCREEN_WIDTH/2 + 50,+SCREEN_HEIGHT/2},60,1,WHITE);
         EndDrawing();

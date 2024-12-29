@@ -41,6 +41,7 @@ int main()
     struct Author* data_list = (struct Author*)calloc(DATABASE_SIZE, sizeof(struct Author));
     memset(data_list,0,sizeof(*data_list));
     ExcelKatledici(data_list, main_graph);
+
     AssignEdgesToEveryone(main_graph, data_list, actual_used);
 
     for(int i=0; i<DATABASE_SIZE ;i++)
@@ -88,7 +89,8 @@ int main()
     int WhichCircle = -1;
     int Scroll = 0;
 
-    while(!WindowShouldClose()){
+    while(!WindowShouldClose())
+    {
         int textInfo1[7];
         int textInfo2[7];
         int textInfo3[7];
@@ -105,11 +107,14 @@ int main()
             camera.target = Vector2Add(camera.target, delta);
         }
 
-        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-            for (int i = 0; i < main_graph->vertice_number-6; i++) {
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON))
+        {
+            for (int i = 0; i < main_graph->vertice_number-6; i++)
+            {
                     Vector2 CirclePosition = (Vector2){position[i].pos_x,position[i].pos_y};
 
-                if (CheckCollisionPointCircle(mousePosition, CirclePosition, position[i].cf.radius)){
+                if (CheckCollisionPointCircle(mousePosition, CirclePosition, position[i].cf.radius))
+                {
                     clickedCircleIndex = i;
                     WhichCircle = i;
                     break;
@@ -264,7 +269,7 @@ int main()
         }
         ///Open The Text Box
 
-        if(DrawTextBox && position[WhichCircle].author.orcid[0] != '\0'){
+        if(DrawTextBox){
 
             DrawRectangle(TextPos_x,TextPos_y,TextWidht,TextHeight,GRAY);
             int i = 0;
